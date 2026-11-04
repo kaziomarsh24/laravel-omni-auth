@@ -108,7 +108,11 @@ import * as Notifications from 'expo-notifications';
 export async function syncPushToken() {
   const token = (await Notifications.getExpoPushTokenAsync()).data;
   await api.post('/api/auth/devices/fcm', {
-    fcm_token: token,
+    push_token: token, // accepts 'push_token' or 'fcm_token'
   });
 }
 ```
+
+:::tip[Header Auto-Tracking]
+You can also set `X-Push-Token: <token>` in your default Axios headers, and OmniAuth will automatically associate the push token with your active device session during login, registration, or token refresh!
+:::

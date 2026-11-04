@@ -98,11 +98,11 @@ Response (Standard Account):
 Response (If Account Has 2FA Enabled):
 ```json
 {
-  "status": "requires_2fa",
-  "message": "Two-factor authentication code required.",
+  "ok": true,
+  "message": "Two-factor authentication required.",
   "data": {
-    "challenge_token": "2fa_challenge_tok...",
-    "expires_in": 300
+    "requires_2fa": true,
+    "two_factor_token": "2fa_challenge_tok..."
   }
 }
 ```

@@ -440,6 +440,15 @@ Synchronizes push notification tokens (FCM, APNS, Expo) for the current device s
 }
 ```
 
+:::tip[Universal Push Token & Header Auto-Tracking]
+OmniAuth accepts push tokens via:
+1. Body: `fcm_token` (Firebase Cloud Messaging convention)
+2. Body: `push_token` (Expo / React Native / APNs convention)
+3. HTTP Header: `X-Push-Token: ...` or `X-FCM-Token: ...`
+
+When passed as an HTTP header during `/api/auth/login`, `/api/auth/register`, or `/api/auth/refresh`, OmniAuth automatically binds the push token to the device record with zero extra API requests!
+:::
+
 ---
 
 ## 3. Two-Factor Authentication

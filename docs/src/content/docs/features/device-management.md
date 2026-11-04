@@ -110,9 +110,9 @@ Response:
 
 ---
 
-### 4. Update Push Notification Token (FCM / APNS)
+### 4. Update Push Notification Token (FCM / APNS / Expo)
 
-Mobile clients can synchronize their device push tokens without re-authenticating (accepts `push_token`, `fcm_token`, or headers `X-Push-Token` / `X-FCM-Token`):
+Mobile clients can synchronize their device push tokens without re-authenticating:
 
 ```http
 POST /api/auth/devices/fcm
@@ -138,6 +138,14 @@ Response:
   }
 }
 ```
-  "message": "Push notification token updated successfully."
-}
-```
+
+:::tip[Universal Push Token Support (FCM & Expo APNs)]
+OmniAuth natively supports both Firebase Cloud Messaging (FCM) and Expo / Apple Push Notification service (APNs) tokens out of the box. You can supply your push token using any of the following 4 methods:
+
+1. **Request Body:** `push_token: "..."` (Expo / React Native convention)
+2. **Request Body:** `fcm_token: "..."` (Firebase Cloud Messaging convention)
+3. **HTTP Header:** `X-Push-Token: ...`
+4. **HTTP Header:** `X-FCM-Token: ...`
+
+**Zero-Endpoint Synchronous Tracking:** Mobile clients can include `X-Push-Token: ...` or `push_token` directly in `/api/auth/login`, `/api/auth/register`, or `/api/auth/refresh`. OmniAuth will silently bind the push token to the device record during authentication without requiring an extra API call!
+:::

@@ -124,11 +124,11 @@ Future<Map<String, dynamic>?> exchangeSocialToken({
   if (response.data['status'] == 'requires_2fa') {
     return {
       'requires_2fa': true,
-      'challenge_token': data['challenge_token'],
+      'challenge_token': data['two_factor_token'] ?? data['challenge_token'],
     };
   }
 
-  final tokens = data['tokens'];
+  final tokens = data['tokens'] ?? data;
   await _storage.write(key: 'access_token', value: tokens['access_token']);
   await _storage.write(key: 'refresh_token', value: tokens['refresh_token']);
 
@@ -138,3 +138,22 @@ Future<Map<String, dynamic>?> exchangeSocialToken({
   };
 }
 ```
+
+---
+
+## Push Notification Sync (FCM & APNs)
+
+Synchronize your Firebase or APNs push token effortlessly:
+
+```dart
+Future<void> syncPushToken(String token) async {
+  await dio.post(
+    '/api/auth/devices/fcm',
+    data: {'fcm_token': token}, // accepts 'fcm_token' or 'push_token'
+  );
+}
+```
+
+:::tip[Header Auto-Tracking]
+You can also pass `X-Push-Token: <token>` in your default Dio headers, and OmniAuth will automatically associate the push token with your device during login, registration, or token refresh without calling an extra endpoint!
+:::
