@@ -10,6 +10,7 @@ use KaziOmar\OmniAuth\Http\Middleware\OmniAuthenticate;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
 use KaziOmar\OmniAuth\Services\DeviceManager;
+use KaziOmar\OmniAuth\Services\TwoFactorManager;
 use Laravel\Sanctum\Sanctum;
 
 class OmniAuthServiceProvider extends ServiceProvider
@@ -33,11 +34,16 @@ class OmniAuthServiceProvider extends ServiceProvider
             return new DeviceManager();
         });
 
+        $this->app->singleton(TwoFactorManager::class, function () {
+            return new TwoFactorManager();
+        });
+
         $this->app->singleton('omni.auth', function ($app) {
             return new OmniAuthManager(
                 $app->make(ClientDetector::class),
                 $app->make(CookieManager::class),
-                $app->make(DeviceManager::class)
+                $app->make(DeviceManager::class),
+                $app->make(TwoFactorManager::class)
             );
         });
 
@@ -111,6 +117,19 @@ class OmniAuthServiceProvider extends ServiceProvider
                     Route::delete('/{id}', [Http\Controllers\DeviceController::class, 'destroy'])->name('omni.devices.destroy');
                     Route::post('/logout-others', [Http\Controllers\DeviceController::class, 'logoutOthers'])->name('omni.devices.logout_others');
                     Route::post('/fcm', [Http\Controllers\DeviceController::class, 'updateFcm'])->name('omni.devices.fcm');
+                });
+
+                // Two-Factor Authentication routes
+                Route::prefix('2fa')->group(function () {
+                    Route::post('/challenge', [Http\Controllers\TwoFactorController::class, 'challenge'])->name('omni.2fa.challenge');
+                    Route::post('/fallback-otp', [Http\Controllers\TwoFactorController::class, 'fallbackOtp'])->name('omni.2fa.fallback_otp');
+
+                    Route::middleware('omni.auth')->group(function () {
+                        Route::post('/setup', [Http\Controllers\TwoFactorController::class, 'setup'])->name('omni.2fa.setup');
+                        Route::post('/confirm', [Http\Controllers\TwoFactorController::class, 'confirm'])->name('omni.2fa.confirm');
+                        Route::post('/recovery-codes', [Http\Controllers\TwoFactorController::class, 'recoveryCodes'])->name('omni.2fa.recovery_codes');
+                        Route::post('/disable', [Http\Controllers\TwoFactorController::class, 'disable'])->name('omni.2fa.disable');
+                    });
                 });
             });
     }

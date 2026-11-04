@@ -63,6 +63,10 @@ abstract class TestCase extends Orchestra
         // 3. Run auth_devices migration
         $deviceMigration = require __DIR__ . '/../database/migrations/2026_01_01_000001_create_auth_devices_table.php';
         $deviceMigration->up();
+
+        // 4. Run auth_two_factor migration
+        $twoFactorMigration = require __DIR__ . '/../database/migrations/2026_01_01_000002_create_auth_two_factor_table.php';
+        $twoFactorMigration->up();
     }
 }
 

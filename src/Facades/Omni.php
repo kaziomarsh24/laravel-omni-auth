@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \KaziOmar\OmniAuth\Services\CookieManager cookies()
  * @method static \KaziOmar\OmniAuth\Services\ClientDetector client()
  * @method static \KaziOmar\OmniAuth\Services\DeviceManager devices()
+ * @method static \KaziOmar\OmniAuth\Services\TwoFactorManager twoFactor()
  *
  * @see \KaziOmar\OmniAuth\OmniAuthManager
  */

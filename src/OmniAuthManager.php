@@ -22,6 +22,7 @@ use KaziOmar\OmniAuth\Http\Resources\OmniUserResource;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
 use KaziOmar\OmniAuth\Services\DeviceManager;
+use KaziOmar\OmniAuth\Services\TwoFactorManager;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class OmniAuthManager
@@ -29,8 +30,17 @@ class OmniAuthManager
     public function __construct(
         protected ClientDetector $clientDetector,
         protected CookieManager $cookieManager,
-        protected DeviceManager $deviceManager
+        protected DeviceManager $deviceManager,
+        protected TwoFactorManager $twoFactorManager
     ) {}
+
+    /**
+     * Access the two-factor authentication service.
+     */
+    public function twoFactor(): TwoFactorManager
+    {
+        return $this->twoFactorManager;
+    }
 
     /**
      * Access the multi-device & FCM management service.
@@ -121,6 +131,21 @@ class OmniAuthManager
         }
 
         event(new Login($guard, $user, false));
+
+        // 5. Two-Factor Authentication Challenge Check
+        if (Features::enabled(Features::twoFactorAuth()) && $this->twoFactorManager->isEnabled($user)) {
+            $twoFactorToken = $this->twoFactorManager->createChallengeToken($user);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Two-factor authentication is required.',
+                'data' => [
+                    'requires_2fa' => true,
+                    'two_factor_token' => $twoFactorToken,
+                    'expires_in' => (int) config('omni-auth.two_factor.challenge_ttl', 5) * 60,
+                ],
+            ]);
+        }
 
         return $this->issueTokenResponse($user, $request, 'Logged in successfully.');
     }

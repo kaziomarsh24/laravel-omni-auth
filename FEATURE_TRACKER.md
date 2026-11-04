@@ -57,12 +57,12 @@ Status format:
 ---
 
 ## Module 5: Two-Factor Authentication (TOTP & Recovery Codes)
-35. [ ] Opt-in database migration for two-factor credentials (`auth_two_factor`).
-36. [ ] Cryptographic TOTP secret generator and QR code URI generation for authenticator apps.
-37. [ ] Pre-authentication challenge flow returning temporary session tokens (`requires_2fa`).
-38. [ ] TOTP 6-digit code verification endpoint exchanging temporary token for final tokens.
-39. [ ] Hashed emergency one-time recovery codes generation and verification.
-40. [ ] Fallback one-time passcode (OTP) delivery via email or SMS when authenticator is inaccessible.
+35. [x] Opt-in database migration for two-factor credentials (`auth_two_factor`).
+36. [x] Cryptographic TOTP secret generator and QR code URI generation for authenticator apps.
+37. [x] Pre-authentication challenge flow returning temporary session tokens (`requires_2fa`).
+38. [x] TOTP 6-digit code verification endpoint exchanging temporary token for final tokens.
+39. [x] Hashed emergency one-time recovery codes generation and verification.
+40. [x] Fallback one-time passcode (OTP) delivery via email or SMS when authenticator is inaccessible.
 
 ---
 

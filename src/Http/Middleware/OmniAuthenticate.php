@@ -32,8 +32,10 @@ class OmniAuthenticate
         // to prevent cross-site request forgery even when SameSite=None is configured.
         if (config('omni-auth.cookie.csrf_protection', true)) {
             $isBearer = (bool) $request->bearerToken();
+            $cookieName = config('omni-auth.cookie.name', 'omni_access_token');
+            $hasAuthCookie = (bool) $request->cookie($cookieName);
 
-            if (!$isBearer && in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            if ($hasAuthCookie && !$isBearer && in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
                 $hasCustomHeader = $request->hasHeader('X-Requested-With')
                     || $request->hasHeader('X-CSRF-TOKEN')
                     || $request->hasHeader('X-XSRF-TOKEN')

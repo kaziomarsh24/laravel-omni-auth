@@ -154,6 +154,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Two-Factor Authentication Settings
+    |--------------------------------------------------------------------------
+    */
+    'two_factor' => [
+        'issuer' => env('OMNI_2FA_ISSUER', null), // null defaults to config('app.name')
+        'challenge_ttl' => env('OMNI_2FA_CHALLENGE_TTL', 5), // minutes
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Ready-to-Use Routes
     |--------------------------------------------------------------------------
     | Opt-in built-in authentication routes. When enabled, standard endpoints
