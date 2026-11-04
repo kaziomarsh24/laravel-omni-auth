@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="100%" height="100%">
+  <defs>
+    <linearGradient id="orbGradA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF2D20" />
+      <stop offset="100%" stop-color="#F43F5E" />
+    </linearGradient>
+    <linearGradient id="orbGradB" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#A855F7" />
+    </linearGradient>
+    <linearGradient id="coreGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF2D20" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#EC4899" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="0.9" />
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Background Base Container -->
+  <rect width="256" height="256" rx="56" fill="#0C0D14" />
+
+  <!-- Outer Orbital Ribbon (Mobile Client - Violet Spectrum) -->
+  <path d="M128 36
+           C192 36 218 64 218 108
+           C218 168 156 208 128 222
+           C100 208 38 168 38 108
+           C38 64 64 36 128 36 Z"
+        fill="none"
+        stroke="url(#orbGradB)"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-dasharray="280 40"
+        filter="url(#softShadow)" />
+
+  <!-- Intersecting Inner Ribbon (Web SPA Client - Laravel Crimson Spectrum) -->
+  <path d="M128 58
+           C174 58 194 80 194 114
+           C194 158 148 188 128 198
+           C108 188 62 158 62 114
+           C62 80 82 58 128 58 Z"
+        fill="#12131F"
+        stroke="url(#orbGradA)"
+        stroke-width="12"
+        stroke-linejoin="round"
+        filter="url(#softShadow)" />
+
+  <!-- The Omni Token Core (Shield Vault + Keyhole) -->
+  <circle cx="128" cy="120" r="32" fill="url(#coreGlow)" />
+  <circle cx="128" cy="120" r="24" fill="#0C0D14" />
+
+  <!-- Sleek Cryptographic Keyhole -->
+  <circle cx="128" cy="115" r="7" fill="#FFFFFF" />
+  <path d="M124 117 L122 131 H134 L132 117 Z" fill="#FFFFFF" />
+
+  <!-- Dual Device Synchronizer Nodes -->
+  <circle cx="62" cy="114" r="7" fill="#FF2D20" />
+  <circle cx="194" cy="114" r="7" fill="#6366F1" />
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="100%" height="100%">
+  <defs>
+    <linearGradient id="monoGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF385C" />
+      <stop offset="100%" stop-color="#E11D48" />
+    </linearGradient>
+    <linearGradient id="monoGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="monoPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#161824" />
+      <stop offset="100%" stop-color="#0B0C12" />
+    </linearGradient>
+    <filter id="crispShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <!-- Dark Rounded Container -->
+  <rect width="256" height="256" rx="56" fill="url(#monoPlate)" stroke="#26283B" stroke-width="2" />
+
+  <!-- Outer Geometric Monogram 'O' Left Facet -->
+  <path d="M128 44
+           C82 44 46 80 46 128
+           C46 176 82 212 128 212
+           L128 176
+           C102 176 82 154 82 128
+           C82 102 102 80 128 80
+           Z"
+        fill="url(#monoGrad1)"
+        filter="url(#crispShadow)" />
+
+  <!-- Outer Geometric Monogram 'O' Right Facet (Overlapping with Prism Shift) -->
+  <path d="M128 44
+           C174 44 210 80 210 128
+           C210 176 174 212 128 212
+           L128 176
+           C154 176 174 154 174 128
+           C174 102 154 80 128 80
+           Z"
+        fill="url(#monoGrad2)"
+        opacity="0.92"
+        filter="url(#crispShadow)" />
+
+  <!-- The Architectural Center Key Blade -->
+  <!-- Upper Key Loop / Shield Node -->
+  <circle cx="128" cy="112" r="18" fill="#FFFFFF" />
+  <circle cx="128" cy="112" r="8" fill="#0B0C12" />
+
+  <!-- Downward Key Shaft with Binary Teeth -->
+  <path d="M124 128 H132 V172 H124 Z" fill="#FFFFFF" />
+  <rect x="132" y="146" width="10" height="6" rx="2" fill="#FFFFFF" />
+  <rect x="132" y="158" width="14" height="6" rx="2" fill="#FFFFFF" />
+
+  <!-- Corner Status Pips (Indicates Dual-Mode Verification) -->
+  <circle cx="128" cy="56" r="4.5" fill="#FFFFFF" />
+  <circle cx="128" cy="200" r="4.5" fill="#FFFFFF" />
+</svg>
