@@ -11,8 +11,8 @@ OmniAuth provides a unified, battle-tested API surface consisting of 29 producti
 
 ## Supported Environments
 
-- **PHP**: 8.2, 8.3, 8.4
-- **Laravel**: 11.x, 12.x
+- **PHP**: 8.2, 8.3, 8.4, 8.5, 8.6
+- **Laravel**: 11.x, 12.x, 13.x
 - **Databases**: MySQL 8.0+, PostgreSQL 13+, SQLite 3.35+
 - **Cache Drivers**: Redis, Memcached, Database, Array (testing)
 

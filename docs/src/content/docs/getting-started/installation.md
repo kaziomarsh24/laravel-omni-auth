@@ -8,7 +8,7 @@ This guide covers installing and configuring Laravel OmniAuth in your Laravel ap
 ## Prerequisites
 
 - **PHP**: 8.2 or higher
-- **Laravel**: 11.0 or 12.0
+- **Laravel**: 11.0, 12.0, or 13.0
 - **Database**: MySQL 8.0+, PostgreSQL 13+, or SQLite 3.35+
 
 ---

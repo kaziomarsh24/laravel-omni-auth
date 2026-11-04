@@ -47,8 +47,8 @@ Full documentation, interactive multi-client integration guides, and API specifi
 
 ## Requirements
 
-- **PHP**: 8.2, 8.3, or 8.4
-- **Laravel**: 11.x or 12.x
+- **PHP**: 8.2, 8.3, 8.4, 8.5, or 8.6
+- **Laravel**: 11.x, 12.x, or 13.x
 - **Laravel Sanctum**: 4.x
 
 ---
