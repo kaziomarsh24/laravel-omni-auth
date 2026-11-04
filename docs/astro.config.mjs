@@ -13,6 +13,7 @@ export default defineConfig({
 				src: './src/assets/logo.svg',
 				replacesTitle: false,
 			},
+			customCss: ['./src/styles/custom.css'],
 			description: 'Production-grade, battle-tested authentication package for Laravel web and mobile applications.',
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/kaziomarsh24/laravel-omni-auth' },
