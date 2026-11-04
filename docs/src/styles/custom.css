@@ -99,37 +99,81 @@ header {
 }
 
 /* --------------------------------------------------------------------------
-   Markdown Typography & Contrast (Fixing Invisible Light Mode Headers)
+   Smart & Refined Markdown Headings
    -------------------------------------------------------------------------- */
-/* Dark Mode Headings */
-:root[data-theme='dark'] .sl-markdown-content h1,
-:root[data-theme='dark'] .sl-markdown-content h2,
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4 {
+  letter-spacing: -0.025em !important;
+  font-weight: 700 !important;
+  scroll-margin-top: 5rem;
+}
+
+.sl-markdown-content h1 {
+  font-size: clamp(2rem, 3.5vw, 2.5rem) !important;
+  line-height: 1.25 !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.sl-markdown-content h2 {
+  font-size: 1.55rem !important;
+  margin-top: 2.5rem !important;
+  margin-bottom: 1rem !important;
+  padding-bottom: 0.5rem !important;
+  border-bottom: 1px solid var(--sl-color-hairline) !important;
+}
+
+.sl-markdown-content h3 {
+  font-size: 1.22rem !important;
+  margin-top: 2rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Dark Mode Typography */
+:root[data-theme='dark'] .sl-markdown-content h1 {
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .sl-markdown-content h2 {
+  color: #f8fafc !important;
+}
+
 :root[data-theme='dark'] .sl-markdown-content h3,
 :root[data-theme='dark'] .sl-markdown-content h4 {
-  color: #f8fafc !important;
+  color: #e2e8f0 !important;
 }
 
 :root[data-theme='dark'] .sl-markdown-content p,
 :root[data-theme='dark'] .sl-markdown-content li {
   color: #cbd5e1 !important;
+  line-height: 1.7 !important;
 }
 
-/* Light Mode Headings (CRITICAL: Must NEVER be white) */
-:root[data-theme='light'] .sl-markdown-content h1,
-:root[data-theme='light'] .sl-markdown-content h2,
+/* Light Mode Typography (Crisp, High-Contrast Slate) */
+:root[data-theme='light'] .sl-markdown-content h1 {
+  color: #0f172a !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content h2 {
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
 :root[data-theme='light'] .sl-markdown-content h3,
 :root[data-theme='light'] .sl-markdown-content h4 {
-  color: #0f172a !important;
-  -webkit-text-fill-color: initial !important;
+  color: #1e293b !important;
 }
 
 :root[data-theme='light'] .sl-markdown-content p,
 :root[data-theme='light'] .sl-markdown-content li {
   color: #334155 !important;
+  line-height: 1.7 !important;
 }
 
 :root[data-theme='light'] .sl-markdown-content strong {
   color: #0f172a !important;
+  font-weight: 600 !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -302,20 +346,44 @@ header {
 }
 
 /* --------------------------------------------------------------------------
-   Code Blocks (Pre)
+   Code Blocks (Pre & Expressive Code)
    -------------------------------------------------------------------------- */
+.expressive-code {
+  margin: 1.5rem 0 !important;
+}
+
+.expressive-code pre,
 pre {
   border-radius: 12px !important;
 }
 
+:root[data-theme='dark'] .expressive-code pre,
 :root[data-theme='dark'] pre {
   background-color: #0d0e17 !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;
 }
 
+:root[data-theme='dark'] .expressive-code .header {
+  background-color: #0b0c14 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Light Mode: Clean High-Contrast Light Background */
+:root[data-theme='light'] .expressive-code pre,
 :root[data-theme='light'] pre {
-  background-color: #0f172a !important;
+  background-color: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-theme='light'] .expressive-code .header {
+  background-color: #f1f5f9 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+:root[data-theme='light'] .expressive-code .ec-line .code {
+  color: #1e293b !important;
 }
 
 /* Inline Code */

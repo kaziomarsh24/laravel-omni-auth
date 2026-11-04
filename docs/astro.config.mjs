@@ -26,6 +26,7 @@ export default defineConfig({
 						{ label: 'Why OmniAuth?', slug: 'getting-started/why-omniauth' },
 						{ label: 'Installation', slug: 'getting-started/installation' },
 						{ label: 'Configuration', slug: 'getting-started/configuration' },
+						{ label: 'Customization & Extending', slug: 'getting-started/customization' },
 					],
 				},
 				{

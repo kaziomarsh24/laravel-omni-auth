@@ -91,7 +91,7 @@ abstract class TestCase extends Orchestra
 
 class TestUser extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, MustVerifyEmailTrait;
+    use \KaziOmar\OmniAuth\Traits\HasOmniAuth, MustVerifyEmailTrait;
 
     protected $table = 'users';
 

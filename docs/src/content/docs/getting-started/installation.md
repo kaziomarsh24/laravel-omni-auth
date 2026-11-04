@@ -39,7 +39,7 @@ You can pass optional flags:
 
 ## 3. Configure the User Model
 
-Add the `HasApiTokens` (from Laravel Sanctum) and `HasOmniAuth` traits to your `App\Models\User` model:
+Add the `HasOmniAuth` trait to your `App\Models\User` model. This automatically registers Sanctum's token engine alongside OmniAuth's device tracking, two-factor authentication, and social account relations:
 
 ```php
 namespace App\Models;
@@ -48,11 +48,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use KaziOmar\OmniAuth\Traits\HasOmniAuth;
-use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasOmniAuth, HasFactory, Notifiable;
+    use HasOmniAuth, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
