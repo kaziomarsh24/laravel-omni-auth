@@ -1,13 +1,19 @@
-# Laravel OmniAuth
+<p align="center">
+  <img src="docs/src/assets/logo.svg" width="120" height="120" alt="Laravel OmniAuth Logo">
+</p>
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/thekaziomar/laravel-omni-auth.svg?style=flat-square)](https://packagist.org/packages/thekaziomar/laravel-omni-auth)
-[![GitHub Tests Action Status](https://github.com/kaziomarsh24/laravel-omni-auth/actions/workflows/run-tests.yml/badge.svg)](https://github.com/kaziomarsh24/laravel-omni-auth/actions)
-[![Total Downloads](https://img.shields.io/packagist/dt/thekaziomar/laravel-omni-auth.svg?style=flat-square)](https://packagist.org/packages/thekaziomar/laravel-omni-auth)
-[![License](https://img.shields.io/packagist/l/thekaziomar/laravel-omni-auth.svg?style=flat-square)](LICENSE.md)
+<h1 align="center">Laravel OmniAuth</h1>
 
-Production-grade, battle-tested authentication package for Laravel web and mobile applications.
+<p align="center">
+  <strong>Production-grade, battle-tested authentication package for Laravel web and mobile applications.</strong>
+</p>
 
-Delivers hardened `SameSite` `HttpOnly` cookies for Web SPAs (Next.js, Nuxt, React, Vue) and short-lived `Bearer` tokens with sliding refresh tokens for native mobile applications (Flutter, React Native, iOS, Android) from a unified, zero-boilerplate API.
+<p align="center">
+  <a href="https://packagist.org/packages/thekaziomar/laravel-omni-auth"><img src="https://img.shields.io/packagist/v/thekaziomar/laravel-omni-auth.svg?style=flat-square" alt="Latest Version on Packagist"></a>
+  <a href="https://github.com/kaziomarsh24/laravel-omni-auth/actions"><img src="https://github.com/kaziomarsh24/laravel-omni-auth/actions/workflows/run-tests.yml/badge.svg" alt="GitHub Tests Action Status"></a>
+  <a href="https://packagist.org/packages/thekaziomar/laravel-omni-auth"><img src="https://img.shields.io/packagist/dt/thekaziomar/laravel-omni-auth.svg?style=flat-square" alt="Total Downloads"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/packagist/l/thekaziomar/laravel-omni-auth.svg?style=flat-square" alt="License"></a>
+</p>
 
 ---
 

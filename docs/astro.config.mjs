@@ -9,6 +9,10 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Laravel OmniAuth',
+			logo: {
+				src: './src/assets/logo.svg',
+				replacesTitle: false,
+			},
 			description: 'Production-grade, battle-tested authentication package for Laravel web and mobile applications.',
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/kaziomarsh24/laravel-omni-auth' },
