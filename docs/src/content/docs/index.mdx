@@ -52,15 +52,15 @@ Every release of Laravel OmniAuth is verified by an exhaustive automated test su
 
 | Test Domain | Target Scenarios Verified | Tests / Assertions | Status |
 | :--- | :--- | :---: | :---: |
-| **Dual-Mode Delivery** | Web SameSite HttpOnly cookies vs Mobile Bearer tokens, token abilities isolation, dual-client header detection | 14 tests (78 assertions) | `Passed` |
-| **Token Rotation & Replay** | Sliding refresh token rotation, replay attack detection, compromised family session invalidation | 6 tests (32 assertions) | `Passed` |
-| **Two-Factor Auth (TOTP)** | RFC 6238 time drift (±1 window), encrypted secrets at rest, hashed recovery codes, brute-force lockout | 8 tests (54 assertions) | `Passed` |
-| **Unified Social Login** | OAuth 2.0 CSRF state validation, Google/Apple native token exchange, RS256 JWKS caching & validation | 6 tests (42 assertions) | `Passed` |
-| **Pre-Hijacking Defense** | Linking verified social account to unverified password account, auto-invalidation of prior credentials | 4 tests (24 assertions) | `Passed` |
-| **Multi-Device Tracking** | Device fingerprinting (OS, browser, IP), FCM & Expo push token syncing, remote session termination | 8 tests (46 assertions) | `Passed` |
-| **Registration & Hydration** | Dynamic field persistence, mass-assignment guards, case variants, default role assignment | 12 tests (68 assertions) | `Passed` |
-| **Passwordless & GDPR** | Cryptographic 6-digit OTPs, signed magic links with host validation, full GDPR account cleanup | 7 tests (38 assertions) | `Passed` |
-| **Penetration Security Audits** | Timing attacks, token confusion (HS256 vs RS256), Origin header spoofing, CSRF enforcement, URL tricks | 29 tests (132 assertions) | `Passed` |
+| **Dual-Mode Delivery** | Web SameSite HttpOnly cookies vs Mobile Bearer tokens, token abilities isolation, dual-client header detection | 14 tests (78 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Token Rotation & Replay** | Sliding refresh token rotation, replay attack detection, compromised family session invalidation | 6 tests (32 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Two-Factor Auth (TOTP)** | RFC 6238 time drift (±1 window), encrypted secrets at rest, hashed recovery codes, brute-force lockout | 8 tests (54 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Unified Social Login** | OAuth 2.0 CSRF state validation, Google/Apple native token exchange, RS256 JWKS caching & validation | 6 tests (42 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Pre-Hijacking Defense** | Linking verified social account to unverified password account, auto-invalidation of prior credentials | 4 tests (24 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Multi-Device Tracking** | Device fingerprinting (OS, browser, IP), FCM & Expo push token syncing, remote session termination | 8 tests (46 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Registration & Hydration** | Dynamic field persistence, mass-assignment guards, case variants, default role assignment | 12 tests (68 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Passwordless & GDPR** | Cryptographic 6-digit OTPs, signed magic links with host validation, full GDPR account cleanup | 7 tests (38 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Penetration Security Audits** | Timing attacks, token confusion (HS256 vs RS256), Origin header spoofing, CSRF enforcement, URL tricks | 29 tests (132 assertions) | <span class="badge-passed">✓ Passed</span> |
 
 :::tip[Run Tests Locally]
 You can execute the entire test suite locally in your terminal at any time:
