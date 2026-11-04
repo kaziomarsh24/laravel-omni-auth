@@ -5,6 +5,7 @@ namespace KaziOmar\OmniAuth\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use KaziOmar\OmniAuth\Models\AuthTwoFactor;
@@ -40,30 +41,40 @@ class TwoFactorManager
 
         $qrCodeUri = $this->qrCodeUri($secret, $user);
         $userId = $user->getAuthIdentifier();
+        $lockKey = "omni_2fa_setup_lock:{$userId}";
+        $lock = $this->cache()->lock($lockKey, 15);
 
-        // C4: If user already has an active, confirmed 2FA, stage new secret in pending cache
-        // to prevent accidentally disabling or corrupting existing active 2FA before confirmation.
-        if ($this->isEnabled($user)) {
-            $this->cache()->put("omni_2fa_pending_{$userId}", [
-                'secret' => $secret,
-                'recovery_codes' => $hashedCodes,
-            ], now()->addMinutes(15));
-        } else {
-            AuthTwoFactor::updateOrCreate(
-                ['user_id' => $userId],
-                [
-                    'secret' => $secret,
-                    'recovery_codes' => $hashedCodes,
-                    'confirmed_at' => null,
-                ]
-            );
+        if (!$lock->get()) {
+            throw new \RuntimeException('Two-factor setup is already in progress. Please wait.');
         }
 
-        return [
-            'secret' => $secret,
-            'qr_code_uri' => $qrCodeUri,
-            'recovery_codes' => $plainCodes,
-        ];
+        try {
+            // C4: If user already has an active, confirmed 2FA, stage new secret in pending cache
+            // to prevent accidentally disabling or corrupting existing active 2FA before confirmation.
+            if ($this->isEnabled($user)) {
+                $this->cache()->put("omni_2fa_pending_{$userId}", [
+                    'secret' => $secret,
+                    'recovery_codes' => $hashedCodes,
+                ], now()->addMinutes(15));
+            } else {
+                AuthTwoFactor::updateOrCreate(
+                    ['user_id' => $userId],
+                    [
+                        'secret' => $secret,
+                        'recovery_codes' => $hashedCodes,
+                        'confirmed_at' => null,
+                    ]
+                );
+            }
+
+            return [
+                'secret' => $secret,
+                'qr_code_uri' => $qrCodeUri,
+                'recovery_codes' => $plainCodes,
+            ];
+        } finally {
+            optional($lock)->release();
+        }
     }
 
     /**
@@ -85,7 +96,7 @@ class TwoFactorManager
                         'confirmed_at' => now(),
                     ]
                 );
-                $this->cache()->forget("omni_2fa_pending_{$userId}");
+                $this->forgetCache("omni_2fa_pending_{$userId}");
                 return true;
             }
             return false;
@@ -235,20 +246,44 @@ class TwoFactorManager
 
     /**
      * Verify a recovery code and remove it from the pool if valid (single-use).
+     * Protected against race conditions and concurrent replay via atomic cache lock.
      */
     public function verifyAndConsumeRecoveryCode(AuthTwoFactor $twoFactor, string $code): bool
     {
-        $hashedCodes = $twoFactor->recovery_codes ?? [];
+        $userId = $twoFactor->user_id;
+        $lockKey = "omni_recovery_code_lock:{$userId}";
+        $lock = $this->cache()->lock($lockKey, 10);
 
-        foreach ($hashedCodes as $index => $hashedCode) {
-            if (Hash::check($code, $hashedCode)) {
-                unset($hashedCodes[$index]);
-                $twoFactor->update(['recovery_codes' => array_values($hashedCodes)]);
-                return true;
+        return (bool) $lock->block(5, function () use ($twoFactor, $code) {
+            $twoFactor->refresh();
+            $hashedCodes = $twoFactor->recovery_codes ?? [];
+
+            if (!is_array($hashedCodes)) {
+                return false;
             }
-        }
 
-        return false;
+            foreach ($hashedCodes as $index => $hashedCode) {
+                if (Hash::check($code, $hashedCode)) {
+                    unset($hashedCodes[$index]);
+                    $twoFactor->update(['recovery_codes' => array_values($hashedCodes)]);
+                    return true;
+                }
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * Invalidate cache key safely, respecting active database transactions.
+     */
+    protected function forgetCache(string $key): void
+    {
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit(fn () => $this->cache()->forget($key));
+        } else {
+            $this->cache()->forget($key);
+        }
     }
 
     /**

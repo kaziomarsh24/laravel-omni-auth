@@ -35,10 +35,15 @@ class PruneExpiredTokensCommand extends Command
         // 1. Prune expired PersonalAccessTokens
         $tokensDeleted = PersonalAccessToken::where('expires_at', '<', $threshold)->delete();
 
-        // 2. Prune inactive device records older than 90 days with no active tokens
+        // 2. Prune inactive device records older than 90 days with no active or existing tokens
         $staleDevicesThreshold = now()->subDays(90);
+        $activeTokenIds = PersonalAccessToken::pluck('id')->all();
+
         $devicesDeleted = AuthDevice::where('last_active_at', '<', $staleDevicesThreshold)
-            ->whereNull('token_id')
+            ->where(function ($query) use ($activeTokenIds) {
+                $query->whereNull('token_id')
+                    ->orWhereNotIn('token_id', $activeTokenIds);
+            })
             ->delete();
 
         $this->info("Pruning completed: {$tokensDeleted} expired tokens and {$devicesDeleted} stale device records purged.");

@@ -267,8 +267,11 @@ class DeviceManager
     {
         $headerDeviceId = $request->header('X-Device-ID') ?? $request->input('device_id');
 
-        if ($headerDeviceId && is_string($headerDeviceId) && trim($headerDeviceId) !== '') {
-            return trim($headerDeviceId);
+        if ($headerDeviceId && is_string($headerDeviceId)) {
+            $trimmed = trim($headerDeviceId);
+            if ($trimmed !== '' && strlen($trimmed) <= 128 && preg_match('/^[\w\-\.]{1,128}$/', $trimmed)) {
+                return $trimmed;
+            }
         }
 
         // Generate deterministic fingerprint from IP, User-Agent, and User ID

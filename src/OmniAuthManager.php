@@ -343,9 +343,13 @@ class OmniAuthManager
             $attributes['email'] = strtolower(trim($attributes['email']));
         }
 
-        // 3. Merge additional explicit data passed by developer
+        // 3. Merge additional explicit data passed by developer (strip guarded keys to prevent mass-assignment)
         if (!empty($additionalData)) {
-            $attributes = array_merge($attributes, $additionalData);
+            $guardedKeys = (array) config('omni-auth.registration.guarded_keys', [
+                'id', 'is_admin', 'role', 'roles', 'permissions', 'email_verified_at', 'remember_token',
+            ]);
+            $safeAdditional = array_diff_key($additionalData, array_flip($guardedKeys));
+            $attributes = array_merge($attributes, $safeAdditional);
         }
 
         // 4. Sanitize attributes: strip confirmation keys
@@ -513,62 +517,74 @@ class OmniAuthManager
         // Replay Attack Detection: Verify if this refresh token was already rotated and revoked
         $tokenHash = hash('sha256', $refreshToken);
         $revokedKey = 'omni_revoked_token:' . $tokenHash;
+        $lockKey = 'omni_refresh_lock:' . $tokenHash;
 
-        if ($this->cache()->has($revokedKey)) {
-            $compromisedUserId = $this->cache()->get($revokedKey);
-            $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+        // Atomic Lock: prevent concurrent refresh requests from issuing duplicate token pairs
+        $lock = $this->cache()->lock($lockKey, 10);
 
-            if ($compromisedUserId) {
-                $compromisedUser = $userModelClass::find($compromisedUserId);
-                if ($compromisedUser && method_exists($compromisedUser, 'tokens')) {
-                    // Security Lockout: Token theft detected! Invalidate all sessions for this account.
-                    $compromisedUser->tokens()->delete();
+        if (!$lock->get()) {
+            return $this->unauthenticatedRefreshResponse('Concurrent refresh in progress. Please retry.', $request, 429);
+        }
+
+        try {
+            if ($this->cache()->has($revokedKey)) {
+                $compromisedUserId = $this->cache()->get($revokedKey);
+                $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+
+                if ($compromisedUserId) {
+                    $compromisedUser = $userModelClass::find($compromisedUserId);
+                    if ($compromisedUser && method_exists($compromisedUser, 'tokens')) {
+                        // Security Lockout: Token theft detected! Invalidate all sessions for this account.
+                        $compromisedUser->tokens()->delete();
+                    }
                 }
+
+                return $this->unauthenticatedRefreshResponse(
+                    'Security alert: Token reuse detected. All active sessions have been terminated for security. Please log in again.',
+                    $request,
+                    401
+                );
             }
 
-            return $this->unauthenticatedRefreshResponse(
-                'Security alert: Token reuse detected. All active sessions have been terminated for security. Please log in again.',
-                $request,
-                401
-            );
-        }
+            // 2. Validate Refresh Token via Sanctum
+            $tokenModel = PersonalAccessToken::findToken($refreshToken);
 
-        // 2. Validate Refresh Token via Sanctum
-        $tokenModel = PersonalAccessToken::findToken($refreshToken);
+            if (!$tokenModel) {
+                return $this->unauthenticatedRefreshResponse('Invalid or expired refresh token.', $request, 401);
+            }
 
-        if (!$tokenModel) {
-            return $this->unauthenticatedRefreshResponse('Invalid or expired refresh token.', $request, 401);
-        }
+            // Ensure token model is strictly a refresh_token and has refresh capability
+            if ($tokenModel->name !== 'refresh_token' || !$tokenModel->can('issue-access-token')) {
+                return $this->unauthenticatedRefreshResponse('Invalid token capability for refresh.', $request, 403);
+            }
 
-        // Ensure token model is strictly a refresh_token and has refresh capability
-        if ($tokenModel->name !== 'refresh_token' || !$tokenModel->can('issue-access-token')) {
-            return $this->unauthenticatedRefreshResponse('Invalid token capability for refresh.', $request, 403);
-        }
+            // Check expiration
+            if ($tokenModel->expires_at && $tokenModel->expires_at->isPast()) {
+                $tokenModel->delete();
 
-        // Check expiration
-        if ($tokenModel->expires_at && $tokenModel->expires_at->isPast()) {
+                return $this->unauthenticatedRefreshResponse('Refresh token has expired. Please log in again.', $request, 401);
+            }
+
+            $user = $tokenModel->tokenable;
+
+            if (!$user) {
+                $tokenModel->delete();
+
+                return $this->unauthenticatedRefreshResponse('Associated user account no longer exists.', $request, 401);
+            }
+
+            // 3. Single-Use Rotation: Revoke old refresh token immediately to prevent replay attacks
             $tokenModel->delete();
 
-            return $this->unauthenticatedRefreshResponse('Refresh token has expired. Please log in again.', $request, 401);
+            // Record the revoked token hash in cache to detect future replay attempts within the detection window
+            $replayTtl = (int) config('omni-auth.tokens.replay_detection_ttl', 15);
+            $this->cache()->put($revokedKey, $user->getAuthIdentifier(), now()->addMinutes($replayTtl));
+
+            // 4. Issue new token pair
+            return $this->issueTokenResponse($user, $request, 'Token refreshed successfully.');
+        } finally {
+            optional($lock)->release();
         }
-
-        $user = $tokenModel->tokenable;
-
-        if (!$user) {
-            $tokenModel->delete();
-
-            return $this->unauthenticatedRefreshResponse('Associated user account no longer exists.', $request, 401);
-        }
-
-        // 3. Single-Use Rotation: Revoke old refresh token immediately to prevent replay attacks
-        $tokenModel->delete();
-
-        // Record the revoked token hash in cache to detect any future replay attempts
-        $refreshTtl = (int) config('omni-auth.tokens.refresh_token_ttl', 43200);
-        $this->cache()->put($revokedKey, $user->getAuthIdentifier(), now()->addMinutes($refreshTtl));
-
-        // 4. Issue new token pair
-        return $this->issueTokenResponse($user, $request, 'Token refreshed successfully.');
     }
 
     /**

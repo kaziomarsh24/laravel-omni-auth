@@ -299,23 +299,18 @@ class SocialAuthManager
         if ($testPublicKey) {
             $signatureVerified = (openssl_verify("{$parts[0]}.{$parts[1]}", $this->base64UrlDecode($parts[2]), $testPublicKey, OPENSSL_ALGO_SHA256) === 1);
         } else {
-            $jwks = Cache::get('omni_apple_jwks');
-            if (!$jwks) {
-                $res = Http::timeout(5)->get('https://appleid.apple.com/auth/keys');
-                if ($res->successful() && !empty($res->json('keys'))) {
-                    $jwks = (array) $res->json('keys');
-                    Cache::put('omni_apple_jwks', $jwks, 86400);
-                } else {
-                    $jwks = [];
+            $cachedJwks = $this->cache()->get('omni_apple_jwks');
+            if ($cachedJwks && is_array($cachedJwks)) {
+                $jwks = $cachedJwks;
+                $matchingKey = $this->findAppleKeyByKid($jwks, $header['kid'] ?? '');
+                // If key not found in cache, Apple may have rotated keys — refresh from Apple
+                if (!$matchingKey) {
+                    $jwks = $this->fetchAppleJwks();
+                    $matchingKey = $this->findAppleKeyByKid($jwks, $header['kid'] ?? '');
                 }
-            }
-
-            $matchingKey = null;
-            foreach ($jwks as $key) {
-                if (($key['kid'] ?? '') === $header['kid']) {
-                    $matchingKey = $key;
-                    break;
-                }
+            } else {
+                $jwks = $this->fetchAppleJwks();
+                $matchingKey = $this->findAppleKeyByKid($jwks, $header['kid'] ?? '');
             }
 
             if (!$matchingKey || empty($matchingKey['n']) || empty($matchingKey['e'])) {
@@ -445,108 +440,147 @@ class SocialAuthManager
     }
 
     /**
+     * Fetch public JWKS keys from Apple with a 12-hour cache.
+     */
+    protected function fetchAppleJwks(): array
+    {
+        $res = Http::timeout(5)->get('https://appleid.apple.com/auth/keys');
+        if ($res->successful() && !empty($res->json('keys'))) {
+            $jwks = (array) $res->json('keys');
+            $this->cache()->put('omni_apple_jwks', $jwks, now()->addHours(12));
+            return $jwks;
+        }
+
+        return [];
+    }
+
+    /**
+     * Find matching JWK by key ID (kid).
+     */
+    protected function findAppleKeyByKid(array $jwks, string $kid): ?array
+    {
+        if (empty($kid)) {
+            return null;
+        }
+
+        foreach ($jwks as $key) {
+            if (($key['kid'] ?? '') === $kid) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Find existing user or create one with intelligent account linking.
+     * Concurrency-safe: utilizes atomic cache lock to prevent duplicate linking races.
      */
     public function findOrCreateUserForProfile(string $provider, array $profile): Authenticatable|Model
     {
         $providerId = (string) $profile['id'];
-        $email = $profile['email'] ?? null;
+        $lockKey = "omni_social_link:{$provider}:{$providerId}";
+        $lock = $this->cache()->lock($lockKey, 15);
 
-        // 1. Look for existing linked social account
-        /** @var AuthSocialAccount|null $socialAccount */
-        $socialAccount = AuthSocialAccount::where('provider', $provider)
-            ->where('provider_id', $providerId)
-            ->first();
+        return $lock->block(5, function () use ($provider, $profile, $providerId) {
+            $email = $profile['email'] ?? null;
 
-        if ($socialAccount) {
-            // Update token or avatar if available
-            $socialAccount->update(array_filter([
-                'token' => $profile['token'] ?? null,
-                'refresh_token' => $profile['refresh_token'] ?? null,
-                'avatar' => $profile['avatar'] ?? null,
-                'data' => $profile['data'] ?? null,
-            ]));
+            // 1. Look for existing linked social account
+            /** @var AuthSocialAccount|null $socialAccount */
+            $socialAccount = AuthSocialAccount::where('provider', $provider)
+                ->where('provider_id', $providerId)
+                ->first();
 
-            return $socialAccount->user;
-        }
-
-        $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
-
-        // 2. Intelligent Account Linking by Email
-        $autoLink = (bool) config('omni-auth.social.auto_link_by_email', true);
-        $isEmailVerifiedByProvider = !empty($profile['email_verified']) && $profile['email_verified'] === true;
-
-        if ($email && $autoLink) {
-            /** @var (Authenticatable&Model)|null $existingUser */
-            $existingUser = $userModelClass::where('email', $email)->first();
-
-            if ($existingUser) {
-                // C2: Strictly reject linking to existing account if provider has not verified the email
-                if (!$isEmailVerifiedByProvider) {
-                    throw new InvalidArgumentException("Cannot link unverified social email [{$email}] to an existing account.");
-                }
-
-                // C2: Pre-hijacking defense: if the existing account was never email-verified,
-                // purge any pre-existing attacker access tokens, invalidate attacker's password, and verify the account now
-                if (empty($existingUser->email_verified_at)) {
-                    $existingUser->email_verified_at = now();
-                    $existingUser->password = Hash::make(Str::random(64));
-                    if (method_exists($existingUser, 'tokens')) {
-                        $existingUser->tokens()->delete();
-                    }
-                    AuthDevice::where('user_id', $existingUser->getAuthIdentifier())->delete();
-                    $existingUser->save();
-                }
-
-                // Link this provider to the existing account
-                AuthSocialAccount::create([
-                    'user_id' => $existingUser->getAuthIdentifier(),
-                    'provider' => $provider,
-                    'provider_id' => $providerId,
+            if ($socialAccount) {
+                // Update token or avatar if available
+                $socialAccount->update(array_filter([
                     'token' => $profile['token'] ?? null,
                     'refresh_token' => $profile['refresh_token'] ?? null,
                     'avatar' => $profile['avatar'] ?? null,
                     'data' => $profile['data'] ?? null,
-                ]);
+                ]));
 
-                return $existingUser;
+                return $socialAccount->user;
             }
-        }
 
-        // 3. Create a brand new user account
-        $name = $profile['name'] ?? ($email ? explode('@', $email)[0] : 'User');
-        $userData = [
-            'name' => $name,
-            'email' => $email ?? "{$provider}_{$providerId}@omni-auth.local",
-            'password' => Hash::make(Str::random(32)),
-        ];
+            $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
 
-        if (!empty($profile['email_verified'])) {
-            $userData['email_verified_at'] = now();
-        }
+            // 2. Intelligent Account Linking by Email
+            $autoLink = (bool) config('omni-auth.social.auto_link_by_email', true);
+            $isEmailVerifiedByProvider = !empty($profile['email_verified']) && $profile['email_verified'] === true;
 
-        /** @var Authenticatable&Model $newUser */
-        $newUser = $userModelClass::create($userData);
+            if ($email && $autoLink) {
+                /** @var (Authenticatable&Model)|null $existingUser */
+                $existingUser = $userModelClass::where('email', $email)->first();
 
-        AuthSocialAccount::create([
-            'user_id' => $newUser->getAuthIdentifier(),
-            'provider' => $provider,
-            'provider_id' => $providerId,
-            'token' => $profile['token'] ?? null,
-            'refresh_token' => $profile['refresh_token'] ?? null,
-            'avatar' => $profile['avatar'] ?? null,
-            'data' => $profile['data'] ?? null,
-        ]);
+                if ($existingUser) {
+                    // C2: Strictly reject linking to existing account if provider has not verified the email
+                    if (!$isEmailVerifiedByProvider) {
+                        throw new InvalidArgumentException("Cannot link unverified social email [{$email}] to an existing account.");
+                    }
 
-        event(new \Illuminate\Auth\Events\Registered($newUser));
+                    // C2: Pre-hijacking defense: if the existing account was never email-verified,
+                    // purge any pre-existing attacker access tokens, invalidate attacker's password, and verify the account now
+                    if (empty($existingUser->email_verified_at)) {
+                        $existingUser->email_verified_at = now();
+                        $existingUser->password = Hash::make(Str::random(64));
+                        if (method_exists($existingUser, 'tokens')) {
+                            $existingUser->tokens()->delete();
+                        }
+                        AuthDevice::where('user_id', $existingUser->getAuthIdentifier())->delete();
+                        $existingUser->save();
+                    }
 
-        // Auto-assign default role if configured and Spatie Permission exists
-        $defaultRole = config('omni-auth.registration.default_role');
-        if ($defaultRole && method_exists($newUser, 'assignRole')) {
-            $newUser->assignRole($defaultRole);
-        }
+                    // Link this provider to the existing account
+                    AuthSocialAccount::create([
+                        'user_id' => $existingUser->getAuthIdentifier(),
+                        'provider' => $provider,
+                        'provider_id' => $providerId,
+                        'token' => $profile['token'] ?? null,
+                        'refresh_token' => $profile['refresh_token'] ?? null,
+                        'avatar' => $profile['avatar'] ?? null,
+                        'data' => $profile['data'] ?? null,
+                    ]);
 
-        return $newUser;
+                    return $existingUser;
+                }
+            }
+
+            // 3. Create a brand new user account
+            $name = $profile['name'] ?? ($email ? explode('@', $email)[0] : 'User');
+            $userData = [
+                'name' => $name,
+                'email' => $email ?? "{$provider}_{$providerId}@omni-auth.local",
+                'password' => Hash::make(Str::random(32)),
+            ];
+
+            if (!empty($profile['email_verified'])) {
+                $userData['email_verified_at'] = now();
+            }
+
+            /** @var Authenticatable&Model $newUser */
+            $newUser = $userModelClass::create($userData);
+
+            AuthSocialAccount::create([
+                'user_id' => $newUser->getAuthIdentifier(),
+                'provider' => $provider,
+                'provider_id' => $providerId,
+                'token' => $profile['token'] ?? null,
+                'refresh_token' => $profile['refresh_token'] ?? null,
+                'avatar' => $profile['avatar'] ?? null,
+                'data' => $profile['data'] ?? null,
+            ]);
+
+            event(new \Illuminate\Auth\Events\Registered($newUser));
+
+            // Auto-assign default role if configured and Spatie Permission exists
+            $defaultRole = config('omni-auth.registration.default_role');
+            if ($defaultRole && method_exists($newUser, 'assignRole')) {
+                $newUser->assignRole($defaultRole);
+            }
+
+            return $newUser;
+        });
     }
 
     /**
@@ -743,5 +777,15 @@ class SocialAuthManager
         }
 
         return (string) base64_decode(strtr($data, '-_', '+/'));
+    }
+
+    /**
+     * Resolve the configured cache store instance.
+     */
+    protected function cache(): \Illuminate\Contracts\Cache\Repository
+    {
+        $store = config('omni-auth.cache_store');
+
+        return $store ? Cache::store($store) : Cache::store();
     }
 }

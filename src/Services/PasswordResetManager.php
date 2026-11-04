@@ -519,7 +519,11 @@ class PasswordResetManager
         // 5. Fire deletion event before record removal
         event(new AccountDeleted($user));
 
-        // 6. Delete user record
+        // 6. Delete user record (enforce forceDelete for full GDPR data removal if SoftDeletes is used)
+        if (method_exists($user, 'forceDelete')) {
+            return (bool) $user->forceDelete();
+        }
+
         return (bool) $user->delete();
     }
 }

@@ -74,6 +74,7 @@ return [
     'tokens' => [
         'access_token_ttl' => env('OMNI_ACCESS_TOKEN_TTL', 15), // 15 minutes
         'refresh_token_ttl' => env('OMNI_REFRESH_TOKEN_TTL', 43200), // 30 days
+        'replay_detection_ttl' => env('OMNI_REPLAY_DETECTION_TTL', 15), // 15 minutes replay detection window
     ],
 
     /*
