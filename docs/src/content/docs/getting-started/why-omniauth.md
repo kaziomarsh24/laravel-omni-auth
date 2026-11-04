@@ -5,7 +5,31 @@ description: Architectural vulnerabilities in standard Laravel auth implementati
 
 Most engineering teams begin new Laravel projects by installing Laravel Sanctum or Breeze, assuming that built-in primitives guarantee end-to-end security. While Sanctum provides reliable token issuance and cookie authentication, connecting it to mobile clients, social login providers, multi-device tracking, and two-factor workflows introduces critical security edge cases.
 
-OmniAuth was developed directly out of these recurring production vulnerabilities. Its codebase has undergone two rigorous rounds of whitebox security audits and is enforced by a test suite of 90 automated tests and 502 assertions.
+OmniAuth was developed directly out of these recurring production vulnerabilities. Its codebase has undergone two rigorous rounds of whitebox security audits and is enforced by a test suite of 94 automated tests and 514 assertions.
+
+---
+
+## Architectural Comparison Matrix
+
+The table below provides an objective, side-by-side technical comparison between standard Laravel authentication tools and Laravel OmniAuth when building multi-client (Web + Mobile) applications:
+
+| Feature / Security Defense | Laravel Breeze | Laravel Fortify | Raw Laravel Sanctum | Laravel OmniAuth |
+| :--- | :---: | :---: | :---: | :---: |
+| **Package Architecture** | Starter Kit *(Code Scaffolding)* | Headless Backend | Auth / Transport Driver | Turnkey Modular Package |
+| **Dual-Mode Delivery**<br><small>Seamless Web HttpOnly Cookies + Mobile Bearer on same API</small> | ❌ | ❌ | ❌ *(Requires manual boilerplate)* | ✅ **Built-in** |
+| **Single-Use Refresh Token Rotation**<br><small>With automatic breach detection & cascade revocation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Refresh Token Boundary Guard**<br><small>Prevents refresh tokens from authenticating standard API routes</small> | ❌ | ❌ | ❌ | ✅ **Framework Guard Hook** |
+| **Multi-Device Session Auditing**<br><small>IP, User-Agent, device name, and individual device revocation</small> | ❌ | ⚠️ *(Session table only)* | ❌ *(Token name string only)* | ✅ **Dedicated Device API** |
+| **Push Notification (FCM) Token Binding**<br><small>Stores and syncs active FCM tokens per device session</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Native Mobile Social Auth**<br><small>Apple & Google RS256 JWKS asymmetric token verification</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Social Account Pre-Hijacking Defense**<br><small>Invalidates unverified local password on OAuth email link</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Constant-Time Timing Attack Defense**<br><small>Dummy bcrypt comparison on non-existent users</small> | ❌ | ❌ | ❌ | ✅ **Built-in (~235ms vs ~259ms)** |
+| **Headless 2FA Challenge Protocol**<br><small>RFC 6238 TOTP + recovery codes with token withholding</small> | ❌ | ⚠️ *(Web session only)* | ❌ | ✅ **Headless Token Protocol** |
+| **Passwordless Magic Login Links**<br><small>Single-use signed links with RFC-compliant host validation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Ready-to-Use Production Endpoints**<br><small>Zero-boilerplate turnkey authentication routes</small> | ❌ *(Publishes code to app/)* | ⚠️ *(Action classes only)* | ❌ *(Token issuing only)* | ✅ **29 Production Endpoints** |
+| **Pre-Configured Postman & Bruno Tooling**<br><small>With automated token chaining & environment variables</small> | ❌ | ❌ | ❌ | ✅ **Included** |
+
+---
 
 Here are the specific failure modes standard Laravel implementations encounter and how OmniAuth mitigates them.
 
