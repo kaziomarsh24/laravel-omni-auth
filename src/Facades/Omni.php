@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static \KaziOmar\OmniAuth\Services\DeviceManager devices()
  * @method static \KaziOmar\OmniAuth\Services\TwoFactorManager twoFactor()
  * @method static \KaziOmar\OmniAuth\Services\SocialAuthManager social()
+ * @method static \KaziOmar\OmniAuth\Services\PasswordResetManager passwordReset()
+ * @method static bool deleteAccount(\Illuminate\Contracts\Auth\Authenticatable $user, ?string $password = null)
  *
  * @see \KaziOmar\OmniAuth\OmniAuthManager
  */

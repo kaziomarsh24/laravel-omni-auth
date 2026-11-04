@@ -195,6 +195,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Password Reset & Security Settings
+    |--------------------------------------------------------------------------
+    */
+    'password_reset' => [
+        'otp_ttl' => env('OMNI_RESET_OTP_TTL', 15), // minutes
+        'token_ttl' => env('OMNI_RESET_TOKEN_TTL', 15), // minutes
+        'max_attempts' => env('OMNI_RESET_MAX_ATTEMPTS', 5),
+        'enforce_strength' => env('OMNI_ENFORCE_PASSWORD_STRENGTH', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Email Verification Settings
+    |--------------------------------------------------------------------------
+    */
+    'verification' => [
+        'ttl' => env('OMNI_VERIFICATION_TTL', 60), // minutes
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Passwordless Magic Link Settings
+    |--------------------------------------------------------------------------
+    */
+    'magic_link' => [
+        'ttl' => env('OMNI_MAGIC_LINK_TTL', 15), // minutes
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Ready-to-Use Routes
     |--------------------------------------------------------------------------
     | Opt-in built-in authentication routes. When enabled, standard endpoints

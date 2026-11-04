@@ -2,6 +2,8 @@
 
 namespace KaziOmar\OmniAuth\Tests;
 
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Schema;
@@ -86,9 +88,9 @@ abstract class TestCase extends Orchestra
     }
 }
 
-class TestUser extends Authenticatable
+class TestUser extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens;
+    use HasApiTokens, MustVerifyEmailTrait;
 
     protected $table = 'users';
 

@@ -22,6 +22,7 @@ use KaziOmar\OmniAuth\Http\Resources\OmniUserResource;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
 use KaziOmar\OmniAuth\Services\DeviceManager;
+use KaziOmar\OmniAuth\Services\PasswordResetManager;
 use KaziOmar\OmniAuth\Services\SocialAuthManager;
 use KaziOmar\OmniAuth\Services\TwoFactorManager;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -29,6 +30,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 class OmniAuthManager
 {
     protected ?SocialAuthManager $socialManager = null;
+    protected ?PasswordResetManager $passwordResetManager = null;
 
     public function __construct(
         protected ClientDetector $clientDetector,
@@ -36,6 +38,22 @@ class OmniAuthManager
         protected DeviceManager $deviceManager,
         protected TwoFactorManager $twoFactorManager
     ) {}
+
+    /**
+     * Access the password reset, verification, and account management service.
+     */
+    public function passwordReset(): PasswordResetManager
+    {
+        return $this->passwordResetManager ??= new PasswordResetManager($this->deviceManager);
+    }
+
+    /**
+     * Delete user account permanently complying with App Store guidelines & GDPR.
+     */
+    public function deleteAccount(Authenticatable|Model $user, ?string $password = null): bool
+    {
+        return $this->passwordReset()->deleteAccount($user, $password);
+    }
 
     /**
      * Access the social authentication manager.

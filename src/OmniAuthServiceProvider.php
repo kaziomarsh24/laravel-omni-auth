@@ -143,6 +143,22 @@ class OmniAuthServiceProvider extends ServiceProvider
                         Route::delete('/{provider}', [Http\Controllers\SocialAuthController::class, 'unlink'])->name('omni.social.unlink');
                     });
                 });
+
+                // Password Reset routes
+                Route::post('/forgot-password', [Http\Controllers\PasswordResetController::class, 'forgotPassword'])->name('omni.password.forgot');
+                Route::post('/verify-reset-otp', [Http\Controllers\PasswordResetController::class, 'verifyOtp'])->name('omni.password.verify_otp');
+                Route::post('/reset-password', [Http\Controllers\PasswordResetController::class, 'resetPassword'])->name('omni.password.reset');
+
+                // Magic Login Link routes
+                Route::post('/magic-link', [Http\Controllers\VerificationController::class, 'sendMagicLink'])->name('omni.magic.send');
+                Route::match(['get', 'post'], '/magic-link/verify', [Http\Controllers\VerificationController::class, 'verifyMagicLink'])->name('omni.magic.verify');
+
+                // Email Verification & Account Deletion routes
+                Route::middleware('omni.auth')->group(function () {
+                    Route::post('/email/resend', [Http\Controllers\VerificationController::class, 'resendEmail'])->name('omni.email.resend');
+                    Route::post('/email/verify', [Http\Controllers\VerificationController::class, 'verifyEmail'])->name('omni.email.verify');
+                    Route::delete('/account', [Http\Controllers\VerificationController::class, 'deleteAccount'])->name('omni.account.delete');
+                });
             });
     }
 }

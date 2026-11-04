@@ -76,15 +76,15 @@ Status format:
 ---
 
 ## Module 7: Verification, Account Management & Passwordless Authentication
-46. [ ] Cryptographic time-limited OTP generation for password reset requests.
-47. [ ] Temporary signed password reset token issuance and validation.
-48. [ ] Global session revocation terminating all existing sessions upon password change.
-49. [ ] Password strength validation enforcing entropy and blocking breached or common passwords.
-50. [ ] Standard `MustVerifyEmail` support with verification status check and resend verification endpoint.
-51. [ ] App Store mandatory account deletion & GDPR compliance (`Omni::deleteAccount()` with token/FCM cleanup).
-52. [ ] Passwordless magic login link generation with cryptographic signed URLs.
-53. [ ] Mobile application deep-link support for magic link authentication flows.
-54. [ ] Anti-abuse rate-limiting and lockout for OTP and magic link dispatching.
+46. [x] Cryptographic time-limited OTP generation for password reset requests.
+47. [x] Temporary signed password reset token issuance and validation.
+48. [x] Global session revocation terminating all existing sessions upon password change.
+49. [x] Password strength validation enforcing entropy and blocking breached or common passwords.
+50. [x] Standard `MustVerifyEmail` support with verification status check and resend verification endpoint.
+51. [x] App Store mandatory account deletion & GDPR compliance (`Omni::deleteAccount()` with token/FCM cleanup).
+52. [x] Passwordless magic login link generation with cryptographic signed URLs.
+53. [x] Mobile application deep-link support for magic link authentication flows.
+54. [x] Anti-abuse rate-limiting and lockout for OTP and magic link dispatching.
 
 ---
 
