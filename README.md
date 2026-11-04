@@ -27,27 +27,41 @@ Rolling authentication in Laravel usually starts with Sanctum or Breeze, but pro
 - **Account Pre-Hijacking Prevention**: Links verified social logins safely; unverified pre-existing passwords are automatically invalidated and prior sessions revoked.
 - **Constant-Time Timing Attack Defense**: Executes pre-computed dummy bcrypt comparisons on non-existent users, keeping timing identical (~235ms vs ~259ms).
 - **29 Production Endpoints**: Turnkey API surface covering credentials, TOTP 2FA, social login, device auditing, magic links, and GDPR account deletion.
-- **Battle-Tested**: 90 automated tests (502 assertions) verified against two rounds of whitebox penetration auditing.
+- **Battle-Tested**: 94 automated tests (514 assertions) verified against two rounds of whitebox penetration auditing.
 
 ---
 
 ## Documentation
 
-Full documentation, interactive multi-client integration guides, and API specifications are available at the live documentation portal:
+Full documentation, interactive multi-client integration guides, and API specifications are available at the **[Live Documentation Portal](https://kaziomarsh24.github.io/laravel-omni-auth/)**:
 
-- **[Live Documentation Portal](https://kaziomarsh24.github.io/laravel-omni-auth/)**
-  - [Overview](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/overview/)
-  - [Why OmniAuth?](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/why-omniauth/)
-  - [Installation & Setup](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/installation/)
-  - [Configuration Guide](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/configuration/)
-  - [Dual-Mode Architecture](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/dual-mode-tokens/)
-  - [Security Defenses](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/security-defenses/)
-  - [Two-Factor Authentication](https://kaziomarsh24.github.io/laravel-omni-auth/features/two-factor-auth/)
-  - [Social Login & Token Exchange](https://kaziomarsh24.github.io/laravel-omni-auth/features/social-login/)
-  - [Device Management](https://kaziomarsh24.github.io/laravel-omni-auth/features/device-management/)
-  - [Next.js Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/nextjs-web/)
-  - [Flutter Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/flutter-mobile/)
-  - [Complete API Reference (29 Endpoints)](https://kaziomarsh24.github.io/laravel-omni-auth/reference/api-reference/)
+### 🚀 Getting Started
+- **[Overview](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/overview/)** — Architecture principles, threat model, and core features.
+- **[Why OmniAuth?](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/why-omniauth/)** — Comparison matrix vs Breeze, Fortify, and raw Sanctum.
+- **[Installation & Setup](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/installation/)** — Composer installation, migrations, and environment setup.
+- **[Configuration Guide](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/configuration/)** — Exhaustive option-by-option reference for `config/omni-auth.php`.
+- **[Customization & Extensibility](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/customization/)** — `HasOmniAuth` trait, Eloquent relations, Headless mode, custom validation, resource overrides, and events.
+
+### 🛡️ Architecture & Security
+- **[Dual-Mode Architecture](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/dual-mode-tokens/)** — Web HttpOnly cookies vs Mobile Bearer token lifecycles and client detection.
+- **[Token Rotation & Reuse Detection](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/token-rotation/)** — Single-use refresh token rotation, breach detection, and cascade revocation.
+- **[Security Defenses](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/security-defenses/)** — Timing attack protection, cookie security, and multi-tenant isolation.
+
+### ⚡ Features & Workflows
+- **[Two-Factor Authentication (2FA)](https://kaziomarsh24.github.io/laravel-omni-auth/features/two-factor-auth/)** — RFC 6238 TOTP, encrypted secrets, emergency recovery codes, and SMS/Email fallback OTP.
+- **[Social Login & Native Token Exchange](https://kaziomarsh24.github.io/laravel-omni-auth/features/social-login/)** — OAuth2 redirects and native mobile Google/Apple RS256 JWT exchange.
+- **[Multi-Device Management](https://kaziomarsh24.github.io/laravel-omni-auth/features/device-management/)** — Device tracking, IP/User-Agent resolution, single device revocation, and FCM push tokens.
+- **[Passwordless Magic Links](https://kaziomarsh24.github.io/laravel-omni-auth/features/magic-links/)** — Signed, single-use, cache-backed magic link authentication.
+- **[Email Verification & Account Deletion](https://kaziomarsh24.github.io/laravel-omni-auth/features/verification-and-deletion/)** — Signed email URLs, 6-digit OTP codes, and GDPR-compliant password-verified account deletion.
+
+### 📱 Client Implementation Guides
+- **[Next.js Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/nextjs-web/)** — Next.js 14/15 App Router, Server Components, and HttpOnly cookie proxying.
+- **[Flutter Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/flutter-mobile/)** — `flutter_secure_storage`, Dio interceptors, auto token refresh, and background FCM.
+- **[React Native & Expo Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/react-native-expo/)** — Expo SecureStore, Axios interceptor token chaining, and Apple/Google sign-in.
+
+### 📚 API Reference & Developer Tools
+- **[Complete API Reference (29 Endpoints)](https://kaziomarsh24.github.io/laravel-omni-auth/reference/api-reference/)** — Specifications, request schemas, dual-mode payloads, and error codes for all 29 endpoints.
+- **[Postman & Bruno Collection (.json)](https://kaziomarsh24.github.io/laravel-omni-auth/laravel-omni-auth.postman_collection.json)** — Pre-configured collection with automated token chaining and embedded documentation.
 
 ---
 
