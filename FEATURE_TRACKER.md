@@ -37,11 +37,11 @@ Status format:
 ---
 
 ## Module 3: API Resource & Ready-to-Use Routes
-23. [ ] Default `OmniUserResource` with `$this->when` conditional Spatie binding.
-24. [ ] Configurable user resource override option (`config('omni-auth.user_resource')`).
-25. [ ] Opt-in ready-to-use API route definitions (`/api/auth/login`, `/register`, `/refresh`, `/logout`, `/me`).
-26. [ ] Built-in lightweight controller handling standard authentication flows with zero boilerplate.
-27. [ ] Replay attack detection revoking all active user sessions if an already-used refresh token is presented.
+23. [x] Default `OmniUserResource` with `$this->when` conditional Spatie binding.
+24. [x] Configurable user resource override option (`config('omni-auth.user_resource')`).
+25. [x] Opt-in ready-to-use API route definitions (`/api/auth/login`, `/register`, `/refresh`, `/logout`, `/me`).
+26. [x] Built-in lightweight controller handling standard authentication flows with zero boilerplate.
+27. [x] Replay attack detection revoking all active user sessions if an already-used refresh token is presented.
 
 ---
 

@@ -11,12 +11,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use KaziOmar\OmniAuth\Http\Resources\OmniUserResource;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -353,6 +355,29 @@ class OmniAuthManager
             return $this->unauthenticatedRefreshResponse('Refresh token is missing.', $request, 401);
         }
 
+        // Replay Attack Detection: Verify if this refresh token was already rotated and revoked
+        $tokenHash = hash('sha256', $refreshToken);
+        $revokedKey = 'omni_revoked_token:' . $tokenHash;
+
+        if (Cache::has($revokedKey)) {
+            $compromisedUserId = Cache::get($revokedKey);
+            $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+
+            if ($compromisedUserId) {
+                $compromisedUser = $userModelClass::find($compromisedUserId);
+                if ($compromisedUser && method_exists($compromisedUser, 'tokens')) {
+                    // Security Lockout: Token theft detected! Invalidate all sessions for this account.
+                    $compromisedUser->tokens()->delete();
+                }
+            }
+
+            return $this->unauthenticatedRefreshResponse(
+                'Security alert: Token reuse detected. All active sessions have been terminated for security. Please log in again.',
+                $request,
+                401
+            );
+        }
+
         // 2. Validate Refresh Token via Sanctum
         $tokenModel = PersonalAccessToken::findToken($refreshToken);
 
@@ -382,6 +407,10 @@ class OmniAuthManager
 
         // 3. Single-Use Rotation: Revoke old refresh token immediately to prevent replay attacks
         $tokenModel->delete();
+
+        // Record the revoked token hash in cache to detect any future replay attempts
+        $refreshTtl = (int) config('omni-auth.tokens.refresh_token_ttl', 43200);
+        Cache::put($revokedKey, $user->getAuthIdentifier(), now()->addMinutes($refreshTtl));
 
         // 4. Issue new token pair
         return $this->issueTokenResponse($user, $request, 'Token refreshed successfully.');
@@ -455,39 +484,19 @@ class OmniAuthManager
     }
 
     /**
-     * Format the user model for authentication responses,
-     * automatically attaching Spatie roles and permissions when available.
+     * Format the user model for authentication responses using the configured
+     * JsonResource (default: OmniUserResource) or a developer-provided custom Resource.
      */
     public function formatUserResponse(Authenticatable|Model $user): array
     {
-        $userData = $user->toArray();
+        $customResourceClass = config('omni-auth.user_resource');
 
-        $includePermissions = config('omni-auth.permissions.include_in_response', true);
-
-        if ($includePermissions) {
-            // Auto-detect Spatie Permission or HasRoles trait methods
-            if (method_exists($user, 'getRoleNames')) {
-                $roles = $user->getRoleNames();
-                $userData['roles'] = is_iterable($roles) ? collect($roles)->values()->all() : (array) $roles;
-            } elseif (isset($user->role)) {
-                $userData['roles'] = [(string) $user->role];
-            }
-
-            if (method_exists($user, 'getAllPermissions')) {
-                $permissions = $user->getAllPermissions();
-                if (is_iterable($permissions)) {
-                    $userData['permissions'] = collect($permissions)
-                        ->map(fn($p) => is_object($p) && isset($p->name) ? $p->name : (string) $p)
-                        ->values()
-                        ->all();
-                }
-            } elseif (method_exists($user, 'getPermissionNames')) {
-                $permissions = $user->getPermissionNames();
-                $userData['permissions'] = is_iterable($permissions) ? collect($permissions)->values()->all() : (array) $permissions;
-            }
+        if ($customResourceClass && class_exists($customResourceClass)) {
+            $resource = new $customResourceClass($user);
+            return $resource->resolve(request());
         }
 
-        return $userData;
+        return (new OmniUserResource($user))->resolve(request());
     }
 
     /**

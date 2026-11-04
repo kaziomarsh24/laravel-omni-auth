@@ -87,6 +87,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Custom API Resource
+    |--------------------------------------------------------------------------
+    | Specify your own JsonResource class (e.g. App\Http\Resources\UserResource)
+    | to fully customize how user models are returned in responses.
+    | Leave null to use the built-in OmniUserResource with Spatie support.
+    */
+    'user_resource' => env('OMNI_USER_RESOURCE', null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Store
+    |--------------------------------------------------------------------------
+    | Cache store for OTPs, rate-limiting state, and token replay defense.
+    | Set null to use Laravel's default store (redis, database, file, etc.).
+    */
+    'cache_store' => env('OMNI_CACHE_STORE', null),
+
+    /*
+    |--------------------------------------------------------------------------
     | Rate Limiting (Brute-Force & Distributed Botnet Protection)
     |--------------------------------------------------------------------------
     */
@@ -131,5 +150,18 @@ return [
         'auto_login' => env('OMNI_REGISTRATION_AUTO_LOGIN', true),
         'default_role' => env('OMNI_REGISTRATION_DEFAULT_ROLE', null),
         'rules' => null, // null uses dynamic schema rules based on identifier_column
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ready-to-Use Routes
+    |--------------------------------------------------------------------------
+    | Opt-in built-in authentication routes. When enabled, standard endpoints
+    | (/login, /register, /refresh, /logout, /me) are automatically registered.
+    */
+    'routes' => [
+        'enabled' => env('OMNI_ROUTES_ENABLED', true),
+        'prefix' => env('OMNI_ROUTES_PREFIX', 'api/auth'),
+        'middleware' => ['api'],
     ],
 ];

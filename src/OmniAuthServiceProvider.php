@@ -67,5 +67,29 @@ class OmniAuthServiceProvider extends ServiceProvider
         /** @var Router $router */
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('omni.auth', OmniAuthenticate::class);
+
+        // Register built-in authentication routes if enabled
+        if (config('omni-auth.routes.enabled', true)) {
+            $this->registerRoutes();
+        }
+    }
+
+    /**
+     * Register ready-to-use authentication routes.
+     */
+    protected function registerRoutes(): void
+    {
+        $prefix = config('omni-auth.routes.prefix', 'api/auth');
+        $middleware = config('omni-auth.routes.middleware', ['api']);
+
+        \Illuminate\Support\Facades\Route::prefix($prefix)
+            ->middleware($middleware)
+            ->group(function () {
+                \Illuminate\Support\Facades\Route::post('/login', [Http\Controllers\AuthController::class, 'login'])->name('omni.login');
+                \Illuminate\Support\Facades\Route::post('/register', [Http\Controllers\AuthController::class, 'register'])->name('omni.register');
+                \Illuminate\Support\Facades\Route::post('/refresh', [Http\Controllers\AuthController::class, 'refresh'])->name('omni.refresh');
+                \Illuminate\Support\Facades\Route::post('/logout', [Http\Controllers\AuthController::class, 'logout'])->name('omni.logout');
+                \Illuminate\Support\Facades\Route::get('/me', [Http\Controllers\AuthController::class, 'me'])->middleware('omni.auth')->name('omni.me');
+            });
     }
 }
