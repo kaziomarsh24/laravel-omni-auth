@@ -13,6 +13,8 @@ OmniAuth was developed directly out of these recurring production vulnerabilitie
 
 The table below provides an objective, side-by-side technical comparison between standard Laravel authentication tools and Laravel OmniAuth when building multi-client (Web + Mobile) applications:
 
+<div class="comparison-table-wrapper">
+
 | Feature / Capability | Breeze | Fortify | Sanctum | OmniAuth |
 | :--- | :---: | :---: | :---: | :---: |
 | **Package Architecture** | Starter Kit<br><small>Code Scaffolding</small> | Headless Backend<br><small>Action Classes</small> | Driver / Transport<br><small>Token Issuance</small> | **Turnkey Package**<br><small>Modular & Configurable</small> |
@@ -28,6 +30,8 @@ The table below provides an objective, side-by-side technical comparison between
 | **Magic Login Links**<br><small>Single-use signed links with RFC-compliant host validation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
 | **Production Endpoints**<br><small>Zero-boilerplate turnkey authentication routes</small> | ❌<br><small>Publishes code to app/</small> | ⚠️<br><small>Action classes only</small> | ❌<br><small>Token driver only</small> | ✅ **29 Production Endpoints** |
 | **Postman & Bruno Tooling**<br><small>With automated token chaining & environment variables</small> | ❌ | ❌ | ❌ | ✅ **Included** |
+
+</div>
 
 ---
 

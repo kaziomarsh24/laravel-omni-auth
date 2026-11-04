@@ -622,14 +622,24 @@ td {
   word-break: normal !important;
 }
 
-/* Allow first column to wrap naturally unless it is a standalone code pill */
+/* Ensure first column stays compact */
 table td:first-child {
-  white-space: normal !important;
+  white-space: nowrap !important;
 }
 
 /* Numeric / status / counts stay compact on one line */
 table td:nth-child(3),
 table td:nth-child(4) {
+  white-space: nowrap !important;
+}
+
+/* Isolated multi-line override strictly for the wide comparison matrix table */
+.comparison-table-wrapper table td:first-child {
+  white-space: normal !important;
+}
+
+.comparison-table-wrapper table td:nth-child(3),
+.comparison-table-wrapper table td:nth-child(4) {
   white-space: normal !important;
 }
 
