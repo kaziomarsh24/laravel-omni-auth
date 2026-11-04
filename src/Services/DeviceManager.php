@@ -28,7 +28,9 @@ class DeviceManager
         $resolvedDeviceName = $deviceName ?? $this->resolveDeviceName($request);
         $platform = $this->resolvePlatform($request);
         $resolvedFcmToken = $fcmToken
+            ?? $request->header('X-Push-Token')
             ?? $request->header('X-FCM-Token')
+            ?? $request->input('push_token')
             ?? $request->input('fcm_token');
 
         /** @var AuthDevice $device */
@@ -45,8 +47,16 @@ class DeviceManager
             'last_active_at' => now(),
         ];
 
-        if ($resolvedFcmToken !== null) {
-            $attributes['fcm_token'] = $resolvedFcmToken;
+        if ($resolvedFcmToken !== null && trim($resolvedFcmToken) !== '') {
+            $trimmedPushToken = trim($resolvedFcmToken);
+            $attributes['fcm_token'] = $trimmedPushToken;
+
+            // Device Handover / App Reinstall Safety:
+            // If another user previously registered with this push token on the same physical device,
+            // revoke it to prevent unauthorized cross-user push notifications.
+            AuthDevice::where('fcm_token', $trimmedPushToken)
+                ->where('user_id', '!=', $user->getAuthIdentifier())
+                ->update(['fcm_token' => null]);
         }
 
         if ($device) {
@@ -101,12 +111,15 @@ class DeviceManager
 
         // 1. Check if authenticated Sanctum token matches
         if (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
-            $device = AuthDevice::where('user_id', $user->getAuthIdentifier())
-                ->where('token_id', $user->currentAccessToken()->id)
-                ->first();
+            $accessToken = $user->currentAccessToken();
+            if (isset($accessToken->id) && $accessToken->id !== null) {
+                $device = AuthDevice::where('user_id', $user->getAuthIdentifier())
+                    ->where('token_id', $accessToken->id)
+                    ->first();
 
-            if ($device) {
-                return $device;
+                if ($device) {
+                    return $device;
+                }
             }
         }
 
@@ -222,7 +235,15 @@ class DeviceManager
         $device = $this->current($user, $request);
 
         if ($device) {
-            $device->update(['fcm_token' => $fcmToken]);
+            $trimmed = trim($fcmToken);
+            $device->update(['fcm_token' => $trimmed]);
+
+            if ($trimmed !== '') {
+                AuthDevice::where('fcm_token', $trimmed)
+                    ->where('user_id', '!=', $user->getAuthIdentifier())
+                    ->update(['fcm_token' => null]);
+            }
+
             return $device->fresh();
         }
 

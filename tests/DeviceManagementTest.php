@@ -240,4 +240,48 @@ class DeviceManagementTest extends TestCase
             ->assertJsonPath('ok', false)
             ->assertJsonPath('message', 'Device tracking feature is disabled.');
     }
+
+    public function test_universal_push_token_support_and_handover_safety(): void
+    {
+        // 1. User A logs in on device with push token
+        $userA = $this->user;
+        Omni::devices()->track($userA, Request::create('/test', 'POST', [], [], [], [
+            'HTTP_X_DEVICE_ID' => 'shared_phone_uuid',
+            'HTTP_X_PUSH_TOKEN' => 'ExponentPushToken[shared_expo_token_123]',
+        ]));
+
+        $deviceA = AuthDevice::where('user_id', $userA->id)->first();
+        $this->assertEquals('ExponentPushToken[shared_expo_token_123]', $deviceA->fcm_token);
+
+        // 2. User B logs in on the SAME device (e.g. app reinstalled or device handed over)
+        $userB = TestUser::create([
+            'name' => 'User B',
+            'email' => 'userb@example.com',
+            'password' => Hash::make('Secret123!'),
+        ]);
+
+        Omni::devices()->track($userB, Request::create('/test', 'POST', [], [], [], [
+            'HTTP_X_DEVICE_ID' => 'shared_phone_uuid',
+            'HTTP_X_PUSH_TOKEN' => 'ExponentPushToken[shared_expo_token_123]',
+        ]));
+
+        // Assert User B got the token
+        $deviceB = AuthDevice::where('user_id', $userB->id)->first();
+        $this->assertEquals('ExponentPushToken[shared_expo_token_123]', $deviceB->fcm_token);
+
+        // Assert User A's token was revoked/nullified to prevent push notification leakage
+        $this->assertNull($deviceA->fresh()->fcm_token);
+
+        // 3. Update via controller endpoint using generic push_token payload
+        $this->actingAs($userB);
+        $res = $this->postJson('/api/auth/devices/fcm', [
+            'push_token' => 'ExponentPushToken[new_expo_token_456]',
+        ], [
+            'X-Device-ID' => 'shared_phone_uuid',
+        ]);
+
+        $res->assertStatus(200)
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.device.fcm_token', 'ExponentPushToken[new_expo_token_456]');
+    }
 }

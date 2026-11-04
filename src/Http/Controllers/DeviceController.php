@@ -89,7 +89,7 @@ class DeviceController extends Controller
     }
 
     /**
-     * Update the FCM push notification token for the current device session.
+     * Update the push notification token (FCM / Expo / OneSignal) for the current device session.
      */
     public function updateFcm(Request $request): JsonResponse
     {
@@ -97,12 +97,20 @@ class DeviceController extends Controller
             return $error;
         }
 
-        $request->validate([
-            'fcm_token' => 'required|string',
-        ]);
+        $pushToken = $request->input('push_token')
+            ?? $request->input('fcm_token')
+            ?? $request->header('X-Push-Token')
+            ?? $request->header('X-FCM-Token');
+
+        if (!$pushToken || !is_string($pushToken)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'The push_token or fcm_token field is required.',
+            ], 422);
+        }
 
         $device = Omni::devices()->updateFcmToken(
-            $request->input('fcm_token'),
+            $pushToken,
             $request->user(),
             $request
         );
