@@ -119,24 +119,13 @@ This creates the following database tables:
 OmniAuth generates short-lived access tokens and sliding refresh tokens. Expired tokens and stale device records should be pruned regularly according to your configured [Token Rotation Policies](/laravel-omni-auth/architecture/token-rotation/).
 
 <Tabs>
-  <TabItem label="Laravel 11 & 12 (routes/console.php)">
+  <TabItem label="Laravel 11, 12 & 13 (routes/console.php)">
 
 ```php
 use Illuminate\Support\Facades\Schedule;
 
 // Prune expired tokens and inactive devices daily
 Schedule::command('omni:prune-tokens --hours=24')->daily();
-```
-
-  </TabItem>
-  <TabItem label="Laravel 10 (app/Console/Kernel.php)">
-
-```php
-protected function schedule(Schedule $schedule): void
-{
-    // Prune expired tokens and inactive devices daily
-    $schedule->command('omni:prune-tokens --hours=24')->daily();
-}
 ```
 
   </TabItem>
