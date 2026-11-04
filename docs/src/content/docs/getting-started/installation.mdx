@@ -20,8 +20,18 @@ This guide covers installing and configuring Laravel OmniAuth in your Laravel ap
 Add the package to your application dependencies:
 
 ```bash
-composer require kaziomar/laravel-omni-auth
+composer require thekaziomar/laravel-omni-auth
 ```
+
+:::note[Laravel Sanctum Dependency]
+OmniAuth utilizes **Laravel Sanctum 4.x** under the hood for cryptographically hashed token storage. In a fresh Laravel 11, 12, or 13 application where API scaffolding hasn't been enabled yet, install the API migrations:
+
+```bash
+php artisan install:api
+# Or publish Sanctum migrations directly:
+php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider" --tag="sanctum-migrations"
+```
+:::
 
 ---
 

@@ -16,9 +16,47 @@ abstract class TestCase extends Orchestra
 {
     protected function setUp(): void
     {
+        $this->ensureOpenSslConfig();
+
         parent::setUp();
 
         $this->setUpDatabase();
+    }
+
+    /**
+     * Ensure OpenSSL has a valid configuration file on Windows / Laragon / XAMPP.
+     */
+    protected function ensureOpenSslConfig(): void
+    {
+        $opensslConf = getenv('OPENSSL_CONF') ?: ($_ENV['OPENSSL_CONF'] ?? null);
+        if ($opensslConf && file_exists($opensslConf)) {
+            return;
+        }
+
+        $candidatePaths = [
+            dirname(PHP_BINARY) . '/extras/ssl/openssl.cnf',
+            dirname(PHP_BINARY) . '/openssl.cnf',
+            'C:\\laragon\\etc\\ssl\\openssl.cnf',
+            'C:\\xampp\\php\\extras\\ssl\\openssl.cnf',
+        ];
+
+        foreach ($candidatePaths as $candidate) {
+            if (file_exists($candidate)) {
+                putenv("OPENSSL_CONF={$candidate}");
+                $_ENV['OPENSSL_CONF'] = $candidate;
+                return;
+            }
+        }
+
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $fallbackPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'omni_test_openssl.cnf';
+            if (!file_exists($fallbackPath)) {
+                $minimalConf = "[req]\ndefault_bits = 2048\ndistinguished_name = req_distinguished_name\n[req_distinguished_name]\n";
+                file_put_contents($fallbackPath, $minimalConf);
+            }
+            putenv("OPENSSL_CONF={$fallbackPath}");
+            $_ENV['OPENSSL_CONF'] = $fallbackPath;
+        }
     }
 
     protected function getPackageProviders($app): array

@@ -45,10 +45,20 @@ class InstallCommand extends Command
         }
         $this->call('vendor:publish', $migrationParams);
 
+        // 3. Ensure Sanctum migrations are published for personal_access_tokens
+        $sanctumParams = [
+            '--provider' => 'Laravel\Sanctum\SanctumServiceProvider',
+            '--tag' => 'sanctum-migrations',
+        ];
+        if ($this->option('force')) {
+            $sanctumParams['--force'] = true;
+        }
+        $this->callSilent('vendor:publish', $sanctumParams);
+
         $this->info('OmniAuth configuration and migrations have been published successfully.');
         $this->line('');
         $this->line('Next steps:');
-        $this->line('1. Ensure your User model uses the Laravel\Sanctum\HasApiTokens trait.');
+        $this->line('1. Ensure your User model uses the KaziOmar\OmniAuth\Traits\HasOmniAuth trait.');
         $this->line('2. Run database migrations: php artisan migrate');
         $this->line('3. Configure providers and options in config/omni-auth.php');
 
