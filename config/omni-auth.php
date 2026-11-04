@@ -103,6 +103,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Roles & Permissions (Spatie Permission Integration)
+    |--------------------------------------------------------------------------
+    | If spatie/laravel-permission is used on your User model (or any HasRoles
+    | trait), OmniAuth automatically includes user roles and permissions in
+    | authentication responses (login, register, me) for frontend authorization.
+    */
+    'permissions' => [
+        'enabled' => env('OMNI_PERMISSIONS_ENABLED', true),
+        'include_in_response' => env('OMNI_INCLUDE_PERMISSIONS_IN_RESPONSE', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Registration Settings
     |--------------------------------------------------------------------------
     | Configure auto-login behavior and default validation rules for new user

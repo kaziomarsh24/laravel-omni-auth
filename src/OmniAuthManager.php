@@ -241,7 +241,7 @@ class OmniAuthManager
             'ok' => true,
             'message' => 'User registered successfully.',
             'data' => [
-                'user' => $user,
+                'user' => $this->formatUserResponse($user),
             ],
         ], 201);
     }
@@ -277,7 +277,7 @@ class OmniAuthManager
                 'access_token' => $accessToken,
                 'token_type' => 'Bearer',
                 'expires_in' => $accessTtl * 60,
-                'user' => $user,
+                'user' => $this->formatUserResponse($user),
             ];
 
             if ($refreshToken) {
@@ -296,7 +296,7 @@ class OmniAuthManager
             'ok' => true,
             'message' => $message,
             'data' => [
-                'user' => $user,
+                'user' => $this->formatUserResponse($user),
             ],
         ], $status);
 
@@ -325,38 +325,26 @@ class OmniAuthManager
         }
 
         if (!$refreshToken) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Refresh token is missing.',
-            ], 401);
+            return $this->unauthenticatedRefreshResponse('Refresh token is missing.', $request, 401);
         }
 
         // 2. Validate Refresh Token via Sanctum
         $tokenModel = PersonalAccessToken::findToken($refreshToken);
 
         if (!$tokenModel) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Invalid or expired refresh token.',
-            ], 401);
+            return $this->unauthenticatedRefreshResponse('Invalid or expired refresh token.', $request, 401);
         }
 
         // Ensure token has refresh capability
         if (!$tokenModel->can('issue-access-token')) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Invalid token capability for refresh.',
-            ], 403);
+            return $this->unauthenticatedRefreshResponse('Invalid token capability for refresh.', $request, 403);
         }
 
         // Check expiration
         if ($tokenModel->expires_at && $tokenModel->expires_at->isPast()) {
             $tokenModel->delete();
 
-            return response()->json([
-                'ok' => false,
-                'message' => 'Refresh token has expired. Please log in again.',
-            ], 401);
+            return $this->unauthenticatedRefreshResponse('Refresh token has expired. Please log in again.', $request, 401);
         }
 
         $user = $tokenModel->tokenable;
@@ -364,10 +352,7 @@ class OmniAuthManager
         if (!$user) {
             $tokenModel->delete();
 
-            return response()->json([
-                'ok' => false,
-                'message' => 'Associated user account no longer exists.',
-            ], 401);
+            return $this->unauthenticatedRefreshResponse('Associated user account no longer exists.', $request, 401);
         }
 
         // 3. Single-Use Rotation: Revoke old refresh token immediately to prevent replay attacks
@@ -378,9 +363,31 @@ class OmniAuthManager
     }
 
     /**
-     * Log out the authenticated user, revoking the current access token and clearing cookies.
+     * Return a standardized unauthorized/forbidden response for refresh failures,
+     * ensuring browser cookies are cleared immediately for Web clients.
      */
-    public function logout(?Request $request = null): JsonResponse
+    protected function unauthenticatedRefreshResponse(string $message, Request $request, int $status = 401): JsonResponse
+    {
+        $response = response()->json([
+            'ok' => false,
+            'message' => $message,
+        ], $status);
+
+        if ($this->clientDetector->isWeb($request)) {
+            $response = $this->cookieManager->forgetTokens($response);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Log out the authenticated user, revoking tokens and clearing cookies.
+     * Also revokes the refresh token from database if present, preventing token reuse.
+     *
+     * @param Request|null $request
+     * @param bool $allDevices If true, revokes all personal access tokens for this user
+     */
+    public function logout(?Request $request = null, bool $allDevices = false): JsonResponse
     {
         $request = $request ?? request();
         $guard = config('omni-auth.guard', 'sanctum');
@@ -388,11 +395,25 @@ class OmniAuthManager
         $user = auth($guard)->user();
 
         if ($user) {
-            if (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
+            if ($allDevices && method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            } elseif (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
                 $user->currentAccessToken()->delete();
             }
 
             event(new Logout($guard, $user));
+        }
+
+        // Revoke the refresh token from database if present in cookie, header, or body
+        $refreshToken = $this->cookieManager->getRefreshTokenFromCookie($request)
+            ?? $request->header('X-Refresh-Token')
+            ?? $request->input('refresh_token');
+
+        if ($refreshToken) {
+            $tokenModel = PersonalAccessToken::findToken($refreshToken);
+            if ($tokenModel) {
+                $tokenModel->delete();
+            }
         }
 
         $response = response()->json([
@@ -406,6 +427,64 @@ class OmniAuthManager
         }
 
         return $response;
+    }
+
+    /**
+     * Format the user model for authentication responses,
+     * automatically attaching Spatie roles and permissions when available.
+     */
+    public function formatUserResponse(Authenticatable|Model $user): array
+    {
+        $userData = $user->toArray();
+
+        $includePermissions = config('omni-auth.permissions.include_in_response', true);
+
+        if ($includePermissions) {
+            // Auto-detect Spatie Permission or HasRoles trait methods
+            if (method_exists($user, 'getRoleNames')) {
+                $roles = $user->getRoleNames();
+                $userData['roles'] = is_iterable($roles) ? collect($roles)->values()->all() : (array) $roles;
+            } elseif (isset($user->role)) {
+                $userData['roles'] = [(string) $user->role];
+            }
+
+            if (method_exists($user, 'getAllPermissions')) {
+                $permissions = $user->getAllPermissions();
+                if (is_iterable($permissions)) {
+                    $userData['permissions'] = collect($permissions)
+                        ->map(fn($p) => is_object($p) && isset($p->name) ? $p->name : (string) $p)
+                        ->values()
+                        ->all();
+                }
+            } elseif (method_exists($user, 'getPermissionNames')) {
+                $permissions = $user->getPermissionNames();
+                $userData['permissions'] = is_iterable($permissions) ? collect($permissions)->values()->all() : (array) $permissions;
+            }
+        }
+
+        return $userData;
+    }
+
+    /**
+     * Retrieve the currently authenticated user payload.
+     */
+    public function me(?Request $request = null): JsonResponse
+    {
+        $user = $this->user($request);
+
+        if (!$user) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'data' => [
+                'user' => $this->formatUserResponse($user),
+            ],
+        ]);
     }
 
     /**

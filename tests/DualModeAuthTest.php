@@ -253,4 +253,102 @@ class DualModeAuthTest extends TestCase
         $expiredCookies = array_filter($cookies, fn($c) => $c->getExpiresTime() < time());
         $this->assertNotEmpty($expiredCookies, 'Logout must issue expired cookies to clear browser state.');
     }
+
+    public function test_logout_revokes_refresh_token_from_database(): void
+    {
+        $refreshTokenObj = $this->user->createToken('refresh_token', ['issue-access-token']);
+        $refreshToken = $refreshTokenObj->plainTextToken;
+
+        $this->assertNotNull(PersonalAccessToken::findToken($refreshToken));
+
+        $this->actingAs($this->user, 'sanctum');
+
+        $request = \Illuminate\Http\Request::create('/api/logout', 'POST', [], [
+            'omni_refresh_token' => $refreshToken,
+        ]);
+
+        $response = Omni::logout($request);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        // Refresh token MUST be revoked from database
+        $this->assertNull(PersonalAccessToken::findToken($refreshToken), 'Refresh token must be revoked from DB on logout.');
+    }
+
+    public function test_logout_all_devices_revokes_all_tokens_for_user(): void
+    {
+        $this->user->createToken('device_1');
+        $this->user->createToken('device_2');
+        $this->user->createToken('refresh_token');
+
+        $this->assertEquals(3, $this->user->tokens()->count());
+
+        $this->actingAs($this->user, 'sanctum');
+
+        $response = Omni::logout(allDevices: true);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $this->assertEquals(0, $this->user->tokens()->count(), 'All tokens must be deleted when logging out all devices.');
+    }
+
+    public function test_refresh_failure_clears_cookies_for_web_clients(): void
+    {
+        $request = \Illuminate\Http\Request::create('/api/refresh', 'POST', [], [
+            'omni_refresh_token' => 'invalid-token-here',
+        ]);
+
+        $response = Omni::refresh($request);
+        $this->assertEquals(401, $response->getStatusCode());
+
+        $cookies = $response->headers->getCookies();
+        $this->assertNotEmpty($cookies, 'Expired cookies must be attached when refresh fails.');
+
+        $cookieNames = array_map(fn($c) => $c->getName(), $cookies);
+        $this->assertContains('omni_access_token', $cookieNames);
+        $this->assertContains('omni_refresh_token', $cookieNames);
+
+        $expiredCookies = array_filter($cookies, fn($c) => $c->getExpiresTime() < time());
+        $this->assertNotEmpty($expiredCookies);
+    }
+
+    public function test_format_user_response_auto_attaches_roles_and_permissions(): void
+    {
+        $userWithRoles = new class extends TestUser {
+            public function getRoleNames()
+            {
+                return collect(['admin', 'editor']);
+            }
+
+            public function getAllPermissions()
+            {
+                return collect([
+                    (object) ['name' => 'posts.create'],
+                    (object) ['name' => 'posts.publish'],
+                ]);
+            }
+        };
+
+        $userWithRoles->fill([
+            'name' => 'Role Master',
+            'email' => 'roles@example.com',
+            'password' => 'secret123',
+        ]);
+        $userWithRoles->save();
+
+        $formatted = Omni::formatUserResponse($userWithRoles);
+
+        $this->assertArrayHasKey('roles', $formatted);
+        $this->assertEquals(['admin', 'editor'], $formatted['roles']);
+
+        $this->assertArrayHasKey('permissions', $formatted);
+        $this->assertEquals(['posts.create', 'posts.publish'], $formatted['permissions']);
+
+        // Test Omni::me() endpoint
+        $this->actingAs($userWithRoles, 'sanctum');
+        $meRes = Omni::me();
+        $this->assertEquals(200, $meRes->getStatusCode());
+
+        $meData = json_decode($meRes->getContent(), true)['data']['user'];
+        $this->assertEquals(['admin', 'editor'], $meData['roles']);
+        $this->assertEquals(['posts.create', 'posts.publish'], $meData['permissions']);
+    }
 }
