@@ -6,7 +6,9 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\ValidationException;
 use KaziOmar\OmniAuth\Facades\Omni;
+use KaziOmar\OmniAuth\Features;
 
 class VerificationController extends Controller
 {
@@ -34,6 +36,7 @@ class VerificationController extends Controller
 
     /**
      * Verify email via code or URL hash.
+     * C5: Supports both authenticated API verification and direct signed browser URL clicks.
      */
     public function verifyEmail(Request $request): JsonResponse
     {
@@ -42,16 +45,32 @@ class VerificationController extends Controller
             'hash' => ['nullable', 'string'],
         ]);
 
+        $user = $request->user();
+
+        // If clicking email link in a browser, resolve user from signed route ID
+        if (!$user && $request->route('id')) {
+            $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+            $user = $userModelClass::find($request->route('id'));
+        }
+
+        if (!$user) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
         $verified = Omni::passwordReset()->verifyEmail(
-            $request->user(),
+            $user,
             $validated['otp'] ?? null,
-            $validated['hash'] ?? $request->route('hash')
+            $validated['hash'] ?? $request->route('hash'),
+            $request
         );
 
         if (!$verified) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Invalid or expired verification code.',
+                'message' => 'Invalid, expired, or tampered verification link or code.',
             ], 422);
         }
 
@@ -66,20 +85,35 @@ class VerificationController extends Controller
      */
     public function sendMagicLink(Request $request): JsonResponse
     {
+        if (!Features::enabled(Features::magicLoginLink())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Magic login link feature is disabled.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'redirect_url' => ['nullable', 'string'],
         ]);
 
-        Omni::passwordReset()->sendMagicLink(
-            $validated['email'],
-            $validated['redirect_url'] ?? null
-        );
+        try {
+            Omni::passwordReset()->sendMagicLink(
+                $validated['email'],
+                $validated['redirect_url'] ?? null
+            );
 
-        return response()->json([
-            'ok' => true,
-            'message' => 'If an account exists with this email, a login link has been dispatched.',
-        ]);
+            return response()->json([
+                'ok' => true,
+                'message' => 'If an account exists with this email, a login link has been dispatched.',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        }
     }
 
     /**
@@ -87,6 +121,13 @@ class VerificationController extends Controller
      */
     public function verifyMagicLink(Request $request): mixed
     {
+        if (!Features::enabled(Features::magicLoginLink())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Magic login link feature is disabled.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'token' => ['nullable', 'string'],
             'code' => ['nullable', 'string'],
@@ -102,19 +143,40 @@ class VerificationController extends Controller
             ], 422);
         }
 
-        $user = Omni::passwordReset()->verifyMagicToken(
-            $tokenOrCode,
-            $validated['email'] ?? null
-        );
+        try {
+            $user = Omni::passwordReset()->verifyMagicToken(
+                $tokenOrCode,
+                $validated['email'] ?? null
+            );
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Invalid or expired magic login link.',
+                ], 401);
+            }
+
+            // C3: Enforce Two-Factor Authentication on Magic Link logins
+            if (Features::enabled(Features::twoFactorAuth()) && Omni::twoFactor()->isEnabled($user)) {
+                $challengeToken = Omni::twoFactor()->createChallengeToken($user);
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Two-factor authentication required.',
+                    'data' => [
+                        'requires_2fa' => true,
+                        'two_factor_token' => $challengeToken,
+                    ],
+                ], 200);
+            }
+
+            return Omni::respondWithDualModeTokens($user, $request, 'Logged in successfully via magic link.');
+        } catch (ValidationException $e) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Invalid or expired magic login link.',
-            ], 401);
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
         }
-
-        return Omni::respondWithDualModeTokens($user, $request, 'Logged in successfully via magic link.');
     }
 
     /**

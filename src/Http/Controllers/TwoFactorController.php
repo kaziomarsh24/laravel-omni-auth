@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use KaziOmar\OmniAuth\Facades\Omni;
 use KaziOmar\OmniAuth\Features;
 
@@ -70,11 +71,14 @@ class TwoFactorController extends Controller
 
         Cache::forget($throttleKey);
 
+        event(new \Illuminate\Auth\Events\Login(config('omni-auth.guard', 'sanctum'), $user, false));
+
         return Omni::issueTokenResponse($user, $request, 'Two-factor authentication successful.');
     }
 
     /**
      * Set up two-factor authentication for the authenticated user.
+     * C4: Requires re-authentication if 2FA is already active.
      */
     public function setup(Request $request): JsonResponse
     {
@@ -82,7 +86,37 @@ class TwoFactorController extends Controller
             return $error;
         }
 
-        $setupData = Omni::twoFactor()->setup($request->user());
+        $user = $request->user();
+
+        // C4: If 2FA is already confirmed and active, require password or code re-auth
+        if (Omni::twoFactor()->isEnabled($user)) {
+            $password = $request->input('password');
+            $code = $request->input('code');
+
+            if (!empty($user->password)) {
+                if (!$password || !Hash::check($password, $user->password)) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Current password confirmation is required to re-configure two-factor authentication.',
+                    ], 422);
+                }
+            } elseif ($code) {
+                $twoFactor = \KaziOmar\OmniAuth\Models\AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->first();
+                if (!$twoFactor || !Omni::twoFactor()->verifyCode($twoFactor->secret, trim($code))) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Valid two-factor code is required to re-configure two-factor authentication.',
+                    ], 422);
+                }
+            } else {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Authentication confirmation (password or two-factor code) is required.',
+                ], 422);
+            }
+        }
+
+        $setupData = Omni::twoFactor()->setup($user);
 
         return response()->json([
             'ok' => true,
@@ -148,6 +182,7 @@ class TwoFactorController extends Controller
 
     /**
      * Disable two-factor authentication for the authenticated user.
+     * C4: Requires re-authentication (current password or TOTP code).
      */
     public function disable(Request $request): JsonResponse
     {
@@ -155,7 +190,35 @@ class TwoFactorController extends Controller
             return $error;
         }
 
-        $disabled = Omni::twoFactor()->disable($request->user());
+        $user = $request->user();
+
+        // C4: Re-authentication required to disable 2FA
+        $password = $request->input('password');
+        $code = $request->input('code');
+
+        if (!empty($user->password)) {
+            if (!$password || !Hash::check($password, $user->password)) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Current password confirmation is required to disable two-factor authentication.',
+                ], 422);
+            }
+        } elseif ($code) {
+            $twoFactor = \KaziOmar\OmniAuth\Models\AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->first();
+            if (!$twoFactor || !Omni::twoFactor()->verifyCode($twoFactor->secret, trim($code))) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Valid two-factor code is required to disable two-factor authentication.',
+                ], 422);
+            }
+        } else {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Authentication confirmation (password or two-factor code) is required.',
+            ], 422);
+        }
+
+        $disabled = Omni::twoFactor()->disable($user);
 
         return response()->json([
             'ok' => true,

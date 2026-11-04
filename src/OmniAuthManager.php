@@ -138,8 +138,11 @@ class OmniAuthManager
         /** @var Model|null $user */
         $user = $userModelClass::where($identifierColumn, $identifier)->first();
 
-        // 3. Verify Password
-        if (!$user || !Hash::check($password, (string) $user->getAuthPassword())) {
+        // 3. Verify Password with Side-Channel Timing Attack Prevention
+        $userPassword = $user ? (string) $user->getAuthPassword() : '$2y$12$e80MvQ1k48p7f0BqK3B0vOK0UkmZ84F1n8jW9c5S4E1Q2w3E4r5T6';
+        $passwordValid = Hash::check($password, $userPassword);
+
+        if (!$user || !$passwordValid) {
             if ($rateLimitingEnabled) {
                 RateLimiter::hit($throttleKey, (int) config('omni-auth.rate_limiting.decay_seconds', 60));
                 RateLimiter::hit($globalKey, (int) config('omni-auth.rate_limiting.global_decay_seconds', 900));
@@ -153,15 +156,7 @@ class OmniAuthManager
             ], 401);
         }
 
-        // 4. Success: Clear Rate Limiter and Dispatch Standard Login Event
-        if ($rateLimitingEnabled) {
-            RateLimiter::clear($throttleKey);
-            RateLimiter::clear($globalKey);
-        }
-
-        event(new Login($guard, $user, false));
-
-        // 5. Two-Factor Authentication Challenge Check
+        // 4. Two-Factor Authentication Challenge Check (Must precede Login event)
         if (Features::enabled(Features::twoFactorAuth()) && $this->twoFactorManager->isEnabled($user)) {
             $twoFactorToken = $this->twoFactorManager->createChallengeToken($user);
 
@@ -175,6 +170,14 @@ class OmniAuthManager
                 ],
             ]);
         }
+
+        // 5. Success: Clear Rate Limiter and Dispatch Standard Login Event
+        if ($rateLimitingEnabled) {
+            RateLimiter::clear($throttleKey);
+            RateLimiter::clear($globalKey);
+        }
+
+        event(new Login($guard, $user, false));
 
         return $this->issueTokenResponse($user, $request, 'Logged in successfully.');
     }
@@ -208,11 +211,11 @@ class OmniAuthManager
 
         $request = $requestOrData instanceof Request ? $requestOrData : request();
 
-        $guardedKeys = [
-            'id', 'is_admin', 'role', 'roles', 'permissions',
-            'email_verified_at', 'remember_token', 'password_resets',
-            'created_at', 'updated_at'
-        ];
+        $guardedKeys = array_merge([
+            'id', 'is_admin', 'is_staff', 'is_superuser', 'role', 'roles', 'permissions',
+            'status', 'is_active', 'tenant_id', 'email_verified_at', 'remember_token',
+            'password_resets', 'created_at', 'updated_at'
+        ], (array) config('omni-auth.registration.guarded', []));
 
         // 2. Extract and validate incoming data
         if ($requestOrData instanceof FormRequest) {
@@ -248,15 +251,19 @@ class OmniAuthManager
                 ], 422);
             }
 
-            // Strictly filter out dangerous privilege escalation keys from untrusted request inputs
-            $safeInput = array_diff_key($requestOrData->all(), array_flip($guardedKeys));
-            $attributes = array_merge($safeInput, $validator->validated());
+            $allowedAttributes = config('omni-auth.registration.allowed_attributes');
+            if (!empty($allowedAttributes) && is_array($allowedAttributes)) {
+                $attributes = array_intersect_key($requestOrData->all(), array_flip($allowedAttributes));
+                $attributes = array_merge($attributes, $validator->validated());
+            } else {
+                $safeInput = array_diff_key($requestOrData->all(), array_flip($guardedKeys));
+                $attributes = array_merge($safeInput, $validator->validated());
+            }
             $attributes = array_diff_key($attributes, array_flip($guardedKeys));
         } else {
             // Raw array passed
             $attributes = $requestOrData;
 
-            // If rules are configured or password_confirmation is provided, run validator
             $rules = config('omni-auth.registration.rules') ?? [
                 'name' => ['required', 'string', 'max:255'],
                 $identifierColumn => ['required', 'string', $identifierColumn === 'email' ? 'email' : 'string', 'max:255', "unique:{$table},{$identifierColumn}"],
@@ -273,8 +280,14 @@ class OmniAuthManager
                 ], 422);
             }
 
-            $safeInput = array_diff_key($attributes, array_flip($guardedKeys));
-            $attributes = array_merge($safeInput, $validator->validated());
+            $allowedAttributes = config('omni-auth.registration.allowed_attributes');
+            if (!empty($allowedAttributes) && is_array($allowedAttributes)) {
+                $attributes = array_intersect_key($attributes, array_flip($allowedAttributes));
+                $attributes = array_merge($attributes, $validator->validated());
+            } else {
+                $safeInput = array_diff_key($attributes, array_flip($guardedKeys));
+                $attributes = array_merge($safeInput, $validator->validated());
+            }
             $attributes = array_diff_key($attributes, array_flip($guardedKeys));
         }
 

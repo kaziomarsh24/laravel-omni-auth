@@ -50,6 +50,7 @@ abstract class TestCase extends Orchestra
             \KaziOmar\OmniAuth\Features::fcmTokenManagement(),
             \KaziOmar\OmniAuth\Features::twoFactorAuth(),
             \KaziOmar\OmniAuth\Features::socialLogin(),
+            \KaziOmar\OmniAuth\Features::magicLoginLink(),
         ]);
     }
 

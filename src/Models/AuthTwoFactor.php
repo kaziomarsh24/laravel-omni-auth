@@ -14,6 +14,7 @@ class AuthTwoFactor extends Model
     protected function casts(): array
     {
         return [
+            'secret' => 'encrypted',
             'recovery_codes' => 'array',
             'confirmed_at' => 'datetime',
         ];

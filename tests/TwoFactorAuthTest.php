@@ -246,8 +246,14 @@ class TwoFactorAuthTest extends TestCase
         $newCodes = $regenRes->json('data.recovery_codes');
         $this->assertCount(8, $newCodes);
 
-        // 2. Disable 2FA
-        $disableRes = $this->postJson('/api/auth/2fa/disable');
+        // 2. Disable 2FA requires password re-authentication (C4 security requirement)
+        $unauthDisable = $this->postJson('/api/auth/2fa/disable');
+        $unauthDisable->assertStatus(422);
+
+        $wrongPassDisable = $this->postJson('/api/auth/2fa/disable', ['password' => 'WrongPassword!']);
+        $wrongPassDisable->assertStatus(422);
+
+        $disableRes = $this->postJson('/api/auth/2fa/disable', ['password' => 'Password123!']);
         $disableRes->assertStatus(200)
             ->assertJsonPath('ok', true);
 

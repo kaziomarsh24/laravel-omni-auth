@@ -26,10 +26,27 @@ class OmniAuthenticate
             ], 401);
         }
 
+        // C7: Set default guard and ensure $request->user() returns the authenticated user on stock Laravel
+        auth()->shouldUse($guard);
+        $user = auth($guard)->user();
+        $request->setUserResolver(fn() => $user);
+
+        // H1: Prevent Refresh Tokens from being used as Access Tokens
+        if ($user && method_exists($user, 'currentAccessToken')) {
+            $token = $user->currentAccessToken();
+            if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
+                if ($token->name === 'refresh_token' || !$token->can('access-api')) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Invalid token capability. Refresh tokens cannot access protected API endpoints.',
+                    ], 403);
+                }
+            }
+        }
+
         // CSRF Guard for Cookie-Authenticated Web Requests:
         // When using HttpOnly cookies (no Bearer header) on state-changing operations (POST, PUT, PATCH, DELETE),
-        // enforce presence of a custom anti-CSRF header (X-Requested-With, X-CSRF-TOKEN, X-Client-Type, or Origin match)
-        // to prevent cross-site request forgery even when SameSite=None is configured.
+        // enforce presence of a custom anti-CSRF header or strict origin match
         if (config('omni-auth.cookie.csrf_protection', true)) {
             $isBearer = (bool) $request->bearerToken();
             $cookieName = config('omni-auth.cookie.name', 'omni_access_token');
@@ -42,8 +59,17 @@ class OmniAuthenticate
                     || $request->hasHeader('X-Client-Type');
 
                 $origin = $request->headers->get('Origin');
-                $host = $request->getSchemeAndHttpHost();
-                $originMatches = $origin && str_starts_with($origin, $host);
+                $originMatches = false;
+
+                // H5: Strict Origin comparison to avoid subdomain/prefix spoofing (e.g. localhost.evil.com)
+                if ($origin) {
+                    $originParts = parse_url($origin);
+                    $hostParts = parse_url($request->getSchemeAndHttpHost());
+
+                    $originMatches = ($originParts['scheme'] ?? '') === ($hostParts['scheme'] ?? '')
+                        && ($originParts['host'] ?? '') === ($hostParts['host'] ?? '')
+                        && ($originParts['port'] ?? null) === ($hostParts['port'] ?? null);
+                }
 
                 if (!$hasCustomHeader && !$originMatches) {
                     return response()->json([

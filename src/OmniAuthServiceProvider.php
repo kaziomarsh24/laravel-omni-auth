@@ -153,10 +153,13 @@ class OmniAuthServiceProvider extends ServiceProvider
                 Route::post('/magic-link', [Http\Controllers\VerificationController::class, 'sendMagicLink'])->name('omni.magic.send');
                 Route::match(['get', 'post'], '/magic-link/verify', [Http\Controllers\VerificationController::class, 'verifyMagicLink'])->name('omni.magic.verify');
 
-                // Email Verification & Account Deletion routes
+                // Signed Email Verification Link (accessible via browser GET/POST with valid signature)
+                Route::match(['get', 'post'], '/email/verify/{id}/{hash}', [Http\Controllers\VerificationController::class, 'verifyEmail'])->name('omni.email.verify');
+
+                // Email Verification & Account Deletion routes (authenticated)
                 Route::middleware('omni.auth')->group(function () {
                     Route::post('/email/resend', [Http\Controllers\VerificationController::class, 'resendEmail'])->name('omni.email.resend');
-                    Route::post('/email/verify', [Http\Controllers\VerificationController::class, 'verifyEmail'])->name('omni.email.verify');
+                    Route::post('/email/verify', [Http\Controllers\VerificationController::class, 'verifyEmail'])->name('omni.email.verify_otp');
                     Route::delete('/account', [Http\Controllers\VerificationController::class, 'deleteAccount'])->name('omni.account.delete');
                 });
             });

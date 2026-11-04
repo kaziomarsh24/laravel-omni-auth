@@ -28,6 +28,7 @@ class TwoFactorManager
 
     /**
      * Initiate two-factor setup for a user, generating a secret, recovery codes, and QR URI.
+     * Preserves existing active 2FA until the new setup is confirmed.
      *
      * @return array{secret: string, qr_code_uri: string, recovery_codes: array<string>}
      */
@@ -38,15 +39,25 @@ class TwoFactorManager
         $hashedCodes = array_map(fn($code) => Hash::make($code), $plainCodes);
 
         $qrCodeUri = $this->qrCodeUri($secret, $user);
+        $userId = $user->getAuthIdentifier();
 
-        AuthTwoFactor::updateOrCreate(
-            ['user_id' => $user->getAuthIdentifier()],
-            [
+        // C4: If user already has an active, confirmed 2FA, stage new secret in pending cache
+        // to prevent accidentally disabling or corrupting existing active 2FA before confirmation.
+        if ($this->isEnabled($user)) {
+            $this->cache()->put("omni_2fa_pending_{$userId}", [
                 'secret' => $secret,
                 'recovery_codes' => $hashedCodes,
-                'confirmed_at' => null, // Requires confirmation before being active
-            ]
-        );
+            ], now()->addMinutes(15));
+        } else {
+            AuthTwoFactor::updateOrCreate(
+                ['user_id' => $userId],
+                [
+                    'secret' => $secret,
+                    'recovery_codes' => $hashedCodes,
+                    'confirmed_at' => null,
+                ]
+            );
+        }
 
         return [
             'secret' => $secret,
@@ -60,14 +71,34 @@ class TwoFactorManager
      */
     public function confirm(Authenticatable|Model $user, string $code): bool
     {
+        $userId = $user->getAuthIdentifier();
+
+        // Check if there is a pending re-setup staged
+        $pending = $this->cache()->get("omni_2fa_pending_{$userId}");
+        if ($pending && !empty($pending['secret'])) {
+            if ($this->verifyCode($pending['secret'], trim($code))) {
+                AuthTwoFactor::updateOrCreate(
+                    ['user_id' => $userId],
+                    [
+                        'secret' => $pending['secret'],
+                        'recovery_codes' => $pending['recovery_codes'],
+                        'confirmed_at' => now(),
+                    ]
+                );
+                $this->cache()->forget("omni_2fa_pending_{$userId}");
+                return true;
+            }
+            return false;
+        }
+
         /** @var AuthTwoFactor|null $twoFactor */
-        $twoFactor = AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->first();
+        $twoFactor = AuthTwoFactor::where('user_id', $userId)->first();
 
         if (!$twoFactor || !$twoFactor->secret) {
             return false;
         }
 
-        if ($this->verifyCode($twoFactor->secret, $code)) {
+        if ($this->verifyCode($twoFactor->secret, trim($code))) {
             $twoFactor->update(['confirmed_at' => now()]);
             return true;
         }
@@ -131,16 +162,23 @@ class TwoFactorManager
             return null;
         }
 
+        $trimmedCode = trim($codeOrRecovery);
+
         // 1. First, check if input is a valid 6-digit TOTP code
-        if (preg_match('/^\d{6}$/', trim($codeOrRecovery))) {
-            if ($this->verifyCode($twoFactor->secret, trim($codeOrRecovery))) {
-                $this->cache()->forget($cacheKey);
-                return $user;
+        if (preg_match('/^\d{6}$/', $trimmedCode)) {
+            // H7: Prevent TOTP code replay within the time window across challenges
+            $replayKey = "omni_used_totp_{$userId}_{$trimmedCode}";
+            if (!$this->cache()->has($replayKey)) {
+                if ($this->verifyCode($twoFactor->secret, $trimmedCode)) {
+                    $this->cache()->put($replayKey, true, now()->addSeconds(90));
+                    $this->cache()->forget($cacheKey);
+                    return $user;
+                }
             }
         }
 
         // 2. Otherwise, check if input matches any one-time backup recovery codes
-        if ($this->verifyAndConsumeRecoveryCode($twoFactor, trim($codeOrRecovery))) {
+        if ($this->verifyAndConsumeRecoveryCode($twoFactor, $trimmedCode)) {
             $this->cache()->forget($cacheKey);
             return $user;
         }
@@ -148,7 +186,7 @@ class TwoFactorManager
         // 3. Check fallback OTP if sent via email/SMS
         $fallbackKey = "omni_2fa_fallback_otp_{$userId}";
         $hashedOtp = $this->cache()->get($fallbackKey);
-        if ($hashedOtp && Hash::check(trim($codeOrRecovery), $hashedOtp)) {
+        if ($hashedOtp && Hash::check($trimmedCode, $hashedOtp)) {
             $this->cache()->forget($fallbackKey);
             $this->cache()->forget($cacheKey);
             return $user;
@@ -168,6 +206,13 @@ class TwoFactorManager
         if (!$userId) {
             return false;
         }
+
+        // H7: Rate limit fallback OTP dispatching to 1 per 60 seconds per user
+        $throttleKey = "omni_2fa_fallback_dispatch_{$userId}";
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 1)) {
+            return false;
+        }
+        \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
 
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
         /** @var (Authenticatable&Model)|null $user */

@@ -143,7 +143,15 @@ class SocialAuthTest extends TestCase
 
     public function test_mobile_apple_identity_token_exchange_flow(): void
     {
-        // Build mock Apple identity token (JWT)
+        // Generate real RSA key pair for testing Apple cryptographic verification
+        $rsaKey = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+        $details = openssl_pkey_get_details($rsaKey);
+        config()->set('omni-auth.social.providers.apple.public_key', $details['key']);
+
+        // Build valid RS256 Apple identity token (JWT)
         $header = ['alg' => 'RS256', 'kid' => 'apple_kid'];
         $claims = [
             'iss' => 'https://appleid.apple.com',
@@ -155,9 +163,14 @@ class SocialAuthTest extends TestCase
             'email_verified' => 'true',
         ];
 
-        $jwt = Omni::social()->base64UrlEncode(json_encode($header))
-            . '.' . Omni::social()->base64UrlEncode(json_encode($claims))
-            . '.mock_signature_part';
+        $headerEncoded = Omni::social()->base64UrlEncode(json_encode($header));
+        $claimsEncoded = Omni::social()->base64UrlEncode(json_encode($claims));
+        $dataToSign = "{$headerEncoded}.{$claimsEncoded}";
+
+        openssl_sign($dataToSign, $rawSignature, $rsaKey, OPENSSL_ALGO_SHA256);
+        $signatureEncoded = Omni::social()->base64UrlEncode($rawSignature);
+
+        $jwt = "{$dataToSign}.{$signatureEncoded}";
 
         $response = $this->postJson('/api/auth/social/exchange', [
             'provider' => 'apple',

@@ -46,6 +46,12 @@ class PasswordResetManager
      */
     public function sendResetOtp(string $email, ?string $redirectUrl = null): bool
     {
+        $email = strtolower(trim($email));
+
+        if ($redirectUrl) {
+            $this->validateRedirectUrl($redirectUrl);
+        }
+
         $throttleKey = "omni_pwd_reset_dispatch_{$email}";
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -56,8 +62,9 @@ class PasswordResetManager
         RateLimiter::hit($throttleKey, 60);
 
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+        $identifierColumn = config('omni-auth.identifier_column', 'email');
         /** @var (Authenticatable&Model)|null $user */
-        $user = $userModelClass::where('email', $email)->first();
+        $user = $userModelClass::where($identifierColumn, $email)->first();
 
         if (!$user) {
             return true; // Prevent timing / enumeration attacks
@@ -97,6 +104,7 @@ class PasswordResetManager
      */
     public function verifyResetOtp(string $email, string $otp): ?string
     {
+        $email = strtolower(trim($email));
         $otpKey = "omni_pwd_reset_otp_{$email}";
         $attemptsKey = "omni_pwd_reset_attempts_{$email}";
 
@@ -126,8 +134,9 @@ class PasswordResetManager
         $this->cache()->forget($attemptsKey);
 
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+        $identifierColumn = config('omni-auth.identifier_column', 'email');
         /** @var (Authenticatable&Model)|null $user */
-        $user = $userModelClass::where('email', $email)->first();
+        $user = $userModelClass::where($identifierColumn, $email)->first();
 
         if (!$user) {
             return null;
@@ -259,14 +268,16 @@ class PasswordResetManager
 
     /**
      * Verify email via code or URL hash.
+     * C5: Cryptographically verifies signed URL signature when verifying via link.
      */
-    public function verifyEmail(Authenticatable|Model $user, ?string $otp = null, ?string $hash = null): bool
+    public function verifyEmail(Authenticatable|Model $user, ?string $otp = null, ?string $hash = null, ?\Illuminate\Http\Request $request = null): bool
     {
         if (method_exists($user, 'hasVerifiedEmail') && $user->hasVerifiedEmail()) {
             return true;
         }
 
         $email = method_exists($user, 'getEmailForVerification') ? $user->getEmailForVerification() : $user->email;
+        $request = $request ?? request();
 
         // 1. Verify via numeric OTP if provided
         if ($otp) {
@@ -279,7 +290,11 @@ class PasswordResetManager
 
             $this->cache()->forget($otpKey);
         } elseif ($hash) {
-            // 2. Verify via URL SHA1 hash
+            // C5: URL verification MUST have a valid cryptographic signature and matching hash
+            if (!$request->hasValidSignature()) {
+                return false;
+            }
+
             if (!hash_equals((string) $hash, sha1($email))) {
                 return false;
             }
@@ -290,8 +305,8 @@ class PasswordResetManager
         if (method_exists($user, 'markEmailAsVerified')) {
             $user->markEmailAsVerified();
         } else {
-            $user->email_verified_at = now();
-            $user->save();
+            // Bypass fillable constraints so stock Laravel User model updates cleanly
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
 
         event(new \Illuminate\Auth\Events\Verified($user));
@@ -301,9 +316,16 @@ class PasswordResetManager
 
     /**
      * Send passwordless magic login link and 6-digit code.
+     * C6: Validates redirect_url against trusted domain whitelist to prevent token-theft open redirects.
      */
     public function sendMagicLink(string $email, ?string $redirectUrl = null): bool
     {
+        $email = strtolower(trim($email));
+
+        if ($redirectUrl) {
+            $this->validateRedirectUrl($redirectUrl);
+        }
+
         $throttleKey = "omni_magic_dispatch_{$email}";
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -314,8 +336,9 @@ class PasswordResetManager
         RateLimiter::hit($throttleKey, 60);
 
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
+        $identifierColumn = config('omni-auth.identifier_column', 'email');
         /** @var (Authenticatable&Model)|null $user */
-        $user = $userModelClass::where('email', $email)->first();
+        $user = $userModelClass::where($identifierColumn, $email)->first();
 
         if (!$user) {
             return true; // Prevent timing / enumeration attacks
@@ -327,6 +350,7 @@ class PasswordResetManager
 
         $this->cache()->put("omni_magic_token_{$token}", $user->getAuthIdentifier(), now()->addMinutes($ttl));
         $this->cache()->put("omni_magic_code_{$email}", ['token' => $token, 'hash' => Hash::make($code)], now()->addMinutes($ttl));
+        $this->cache()->put("omni_magic_attempts_{$email}", 0, now()->addMinutes($ttl));
 
         // Support mobile app deep-linking (e.g. myapp://auth/magic-link?token=...) or standard signed web URLs
         if ($redirectUrl) {
@@ -348,20 +372,73 @@ class PasswordResetManager
     }
 
     /**
+     * Validate redirect URL host against allowed origins or mobile custom schemes to prevent open redirects.
+     */
+    public function validateRedirectUrl(string $url): void
+    {
+        $parsed = parse_url($url);
+        $scheme = strtolower($parsed['scheme'] ?? '');
+        $host = strtolower($parsed['host'] ?? '');
+
+        // Allow registered mobile custom schemes (e.g. myapp://)
+        $allowedSchemes = (array) config('omni-auth.magic_link.allowed_schemes', []);
+        if (!empty($scheme) && in_array($scheme, $allowedSchemes, true)) {
+            return;
+        }
+
+        // Allow matching app URL
+        $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        if (!empty($host) && !empty($appHost) && ($host === $appHost || str_ends_with($host, '.' . $appHost))) {
+            return;
+        }
+
+        // Allow configured redirect hosts
+        $allowedHosts = (array) config('omni-auth.allowed_redirect_hosts', []);
+        if (!empty($host) && in_array($host, $allowedHosts, true)) {
+            return;
+        }
+
+        // Allow localhost for local development / testing
+        if ($host === 'localhost' || $host === '127.0.0.1') {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'redirect_url' => ['Untrusted redirect URL domain. Redirect destination is not in allowed hosts.'],
+        ]);
+    }
+
+    /**
      * Verify a magic link token or mobile numeric code and return the authenticated user.
+     * C6: Enforces attempt limit on 6-digit magic codes.
      */
     public function verifyMagicToken(string $tokenOrCode, ?string $email = null): ?Authenticatable
     {
         $token = $tokenOrCode;
 
-        // If numeric code provided with email, resolve underlying token
+        // If numeric code provided with email, resolve underlying token with attempt limiting
         if (preg_match('/^\d{6}$/', trim($tokenOrCode)) && $email) {
-            $codeData = $this->cache()->get("omni_magic_code_{$email}");
+            $normalizedEmail = strtolower(trim($email));
+            $attemptsKey = "omni_magic_attempts_{$normalizedEmail}";
+            $attempts = (int) $this->cache()->get($attemptsKey, 0);
+
+            if ($attempts >= 5) {
+                $this->cache()->forget("omni_magic_code_{$normalizedEmail}");
+                $this->cache()->forget($attemptsKey);
+                throw ValidationException::withMessages([
+                    'code' => ['Too many failed magic code attempts. Please request a new link.'],
+                ]);
+            }
+
+            $codeData = $this->cache()->get("omni_magic_code_{$normalizedEmail}");
             if (!$codeData || !Hash::check(trim($tokenOrCode), $codeData['hash'])) {
+                $this->cache()->increment($attemptsKey);
                 return null;
             }
+
             $token = $codeData['token'];
-            $this->cache()->forget("omni_magic_code_{$email}");
+            $this->cache()->forget("omni_magic_code_{$normalizedEmail}");
+            $this->cache()->forget($attemptsKey);
         }
 
         $tokenKey = "omni_magic_token_{$token}";
@@ -388,10 +465,11 @@ class PasswordResetManager
 
     /**
      * Delete user account permanently complying with Apple App Store Guideline 5.1.1(v) & GDPR.
+     * Allows password-free deletion for social-only users who do not have a password.
      */
     public function deleteAccount(Authenticatable|Model $user, ?string $password = null): bool
     {
-        // If account has password, verify confirmation password
+        // If account has a password set, require and verify confirmation password
         if (!empty($user->password)) {
             if (empty($password) || !Hash::check($password, $user->password)) {
                 throw ValidationException::withMessages([

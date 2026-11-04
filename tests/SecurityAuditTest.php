@@ -3,8 +3,14 @@
 namespace KaziOmar\OmniAuth\Tests;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
+use KaziOmar\OmniAuth\Events\MagicLinkRequested;
 use KaziOmar\OmniAuth\Facades\Omni;
+use KaziOmar\OmniAuth\Models\AuthTwoFactor;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class SecurityAuditTest extends TestCase
@@ -161,5 +167,246 @@ class SecurityAuditTest extends TestCase
         $this->assertEquals(429, $globalLockedResponse->getStatusCode());
         $responseData = json_decode($globalLockedResponse->getContent(), true);
         $this->assertStringContainsString('multiple failed login attempts across networks', $responseData['message']);
+    }
+
+    public function test_refresh_token_cannot_access_protected_endpoint(): void
+    {
+        $user = TestUser::create([
+            'name' => 'Protected User',
+            'email' => 'protected@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+
+        $refreshToken = $user->createToken('refresh_token', ['refresh-token'])->plainTextToken;
+
+        // Attacker attempts to use refresh token on protected /api/auth/me
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $refreshToken,
+            'Accept' => 'application/json',
+        ])->getJson('/api/auth/me');
+
+        $response->assertStatus(403);
+        $this->assertStringContainsString('Refresh tokens cannot access protected API endpoints', $response->json('message'));
+    }
+
+    public function test_fake_apple_token_with_alg_none_is_strictly_rejected(): void
+    {
+        config()->set('omni-auth.social.providers.apple', [
+            'client_id' => 'com.example.service',
+            'team_id' => 'TEAM123456',
+            'key_id' => 'KEY123456',
+        ]);
+
+        // Construct fake JWT with alg: none
+        $header = rtrim(strtr(base64_encode(json_encode(['alg' => 'none', 'typ' => 'JWT'])), '+/', '-_'), '=');
+        $payload = rtrim(strtr(base64_encode(json_encode([
+            'iss' => 'https://appleid.apple.com',
+            'aud' => 'com.example.service',
+            'exp' => time() + 3600,
+            'sub' => 'victim-apple-sub',
+            'email' => 'victim@example.com',
+            'email_verified' => 'true',
+        ])), '+/', '-_'), '=');
+        $fakeJwt = "{$header}.{$payload}.";
+
+        $response = $this->postJson('/api/auth/social/exchange', [
+            'provider' => 'apple',
+            'id_token' => $fakeJwt,
+        ]);
+
+        $response->assertStatus(400);
+        $this->assertStringContainsString('RS256 algorithm', $response->json('message'));
+    }
+
+    public function test_social_login_with_unverified_email_cannot_link_to_existing_account(): void
+    {
+        $user = TestUser::create([
+            'name' => 'Target Account',
+            'email' => 'victim@target.com',
+            'password' => Hash::make('StrongPass123!'),
+        ]);
+
+        config()->set('omni-auth.social.providers.google', [
+            'client_id' => 'test-google-id.apps.googleusercontent.com',
+            'client_secret' => 'secret',
+            'mobile_client_ids' => ['test-google-id.apps.googleusercontent.com'],
+        ]);
+
+        Http::fake([
+            'https://oauth2.googleapis.com/tokeninfo*' => Http::response([
+                'aud' => 'test-google-id.apps.googleusercontent.com',
+                'sub' => 'attacker-google-sub',
+                'email' => 'victim@target.com',
+                'email_verified' => 'false', // Unverified!
+                'name' => 'Attacker',
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/auth/social/exchange', [
+            'provider' => 'google',
+            'id_token' => 'mock-google-token',
+        ]);
+
+        $response->assertStatus(400);
+        $this->assertStringContainsString('Cannot link unverified social email', $response->json('message'));
+    }
+
+    public function test_social_login_and_magic_link_enforce_2fa_challenge_when_enabled(): void
+    {
+        $user = TestUser::create([
+            'name' => 'TwoFA Social User',
+            'email' => 'twofa-social@example.com',
+            'password' => Hash::make('Password123!'),
+        ]);
+
+        // Enable 2FA on account
+        AuthTwoFactor::create([
+            'user_id' => $user->id,
+            'secret' => Omni::twoFactor()->generateSecret(),
+            'confirmed_at' => now(),
+        ]);
+
+        config()->set('omni-auth.social.providers.google', [
+            'client_id' => 'test-client-id.apps.googleusercontent.com',
+            'client_secret' => 'secret',
+            'mobile_client_ids' => ['test-client-id.apps.googleusercontent.com'],
+        ]);
+
+        Http::fake([
+            'https://oauth2.googleapis.com/tokeninfo*' => Http::response([
+                'aud' => 'test-client-id.apps.googleusercontent.com',
+                'sub' => 'google-sub-2fa-123',
+                'email' => 'twofa-social@example.com',
+                'email_verified' => 'true',
+                'name' => 'TwoFA Social User',
+            ], 200),
+        ]);
+
+        // 1. Social Exchange must require 2FA challenge
+        $response = $this->postJson('/api/auth/social/exchange', [
+            'provider' => 'google',
+            'id_token' => 'mock-google-token',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertTrue($response->json('data.requires_2fa'));
+        $this->assertNotEmpty($response->json('data.two_factor_token'));
+        $this->assertNull($response->json('access_token'));
+
+        // 2. Magic Link must also require 2FA challenge
+        Event::fake([MagicLinkRequested::class]);
+        $magicReq = $this->postJson('/api/auth/magic-link', [
+            'email' => 'twofa-social@example.com',
+        ]);
+        $magicReq->assertStatus(200);
+
+        $magicCode = null;
+        Event::assertDispatched(MagicLinkRequested::class, function ($event) use (&$magicCode) {
+            $magicCode = $event->code;
+            return true;
+        });
+
+        $callbackRes = $this->postJson('/api/auth/magic-link/verify', [
+            'email' => 'twofa-social@example.com',
+            'code' => $magicCode,
+        ]);
+        $callbackRes->assertStatus(200);
+        $this->assertTrue($callbackRes->json('data.requires_2fa'));
+        $this->assertNotEmpty($callbackRes->json('data.two_factor_token'));
+        $this->assertNull($callbackRes->json('access_token'));
+    }
+
+    public function test_disabling_2fa_without_reauthentication_fails(): void
+    {
+        $user = TestUser::create([
+            'name' => '2FA Secure User',
+            'email' => 'secure-2fa@example.com',
+            'password' => Hash::make('CorrectPassword123!'),
+        ]);
+
+        $secret = Omni::twoFactor()->generateSecret();
+        AuthTwoFactor::create([
+            'user_id' => $user->id,
+            'secret' => $secret,
+            'confirmed_at' => now(),
+        ]);
+
+        $this->actingAs($user, 'sanctum');
+
+        // Missing password and code must fail with 422
+        $response = $this->postJson('/api/auth/2fa/disable', []);
+        $response->assertStatus(422);
+
+        // Wrong password must fail
+        $responseWrong = $this->postJson('/api/auth/2fa/disable', [
+            'password' => 'wrong-password',
+        ]);
+        $responseWrong->assertStatus(422);
+
+        // Still confirmed in database
+        $this->assertNotNull(AuthTwoFactor::where('user_id', $user->id)->first()->confirmed_at);
+    }
+
+    public function test_email_verification_strictly_requires_valid_url_signature(): void
+    {
+        $user = TestUser::create([
+            'name' => 'Unverified User',
+            'email' => 'unverified@example.com',
+            'password' => Hash::make('Password123!'),
+        ]);
+
+        $hash = sha1('unverified@example.com');
+        $tamperedUrl = "/api/auth/email/verify/{$user->id}/{$hash}?expires=" . (time() + 3600) . "&signature=invalid-tampered-signature";
+
+        $response = $this->getJson($tamperedUrl);
+        $response->assertStatus(422);
+        $this->assertStringContainsString('Invalid, expired, or tampered verification link or code.', $response->json('message'));
+        $this->assertNull($user->fresh()->email_verified_at);
+    }
+
+    public function test_magic_link_untrusted_redirect_host_is_strictly_blocked(): void
+    {
+        $response = $this->postJson('/api/auth/magic-link', [
+            'email' => 'victim@example.com',
+            'redirect_url' => 'https://evil-attacker.com/steal-token',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('Untrusted redirect URL domain', $response->json('message'));
+    }
+
+    public function test_totp_replay_attack_within_same_window_is_prevented(): void
+    {
+        $user = TestUser::create([
+            'name' => 'TOTP Replay Victim',
+            'email' => 'replay@example.com',
+            'password' => Hash::make('Password123!'),
+        ]);
+
+        $secret = Omni::twoFactor()->generateSecret();
+        AuthTwoFactor::create([
+            'user_id' => $user->id,
+            'secret' => $secret,
+            'confirmed_at' => now(),
+        ]);
+
+        $validCode = Omni::twoFactor()->calculateCode($secret);
+        $twoFactorToken = Omni::twoFactor()->createChallengeToken($user);
+
+        // First challenge attempt with validCode -> must succeed
+        $response1 = $this->postJson('/api/auth/2fa/challenge', [
+            'two_factor_token' => $twoFactorToken,
+            'code' => $validCode,
+        ]);
+        $response1->assertStatus(200);
+
+        // Attacker intercepts and replays validCode within the 30-second window
+        $twoFactorToken2 = Omni::twoFactor()->createChallengeToken($user);
+        $response2 = $this->postJson('/api/auth/2fa/challenge', [
+            'two_factor_token' => $twoFactorToken2,
+            'code' => $validCode,
+        ]);
+        $response2->assertStatus(422);
+        $this->assertStringContainsString('Invalid or expired two-factor code.', $response2->json('message'));
     }
 }

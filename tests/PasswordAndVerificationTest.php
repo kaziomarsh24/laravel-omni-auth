@@ -233,6 +233,17 @@ class PasswordAndVerificationTest extends TestCase
     {
         Event::fake([MagicLinkRequested::class]);
 
+        config()->set('omni-auth.magic_link.allowed_schemes', ['myflutterapp']);
+
+        // 1. Untrusted evil open-redirect domain is rejected
+        $evilRes = $this->postJson('/api/auth/magic-link', [
+            'email' => 'john@example.com',
+            'redirect_url' => 'https://evil.example.com/steal',
+        ]);
+        $evilRes->assertStatus(422)
+            ->assertJsonValidationErrors(['redirect_url']);
+
+        // 2. Allowed mobile deep-link scheme succeeds
         $customDeepLink = 'myflutterapp://auth/magic-login';
 
         $sendRes = $this->postJson('/api/auth/magic-link', [

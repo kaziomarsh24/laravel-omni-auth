@@ -6,10 +6,12 @@ use Exception;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use KaziOmar\OmniAuth\Features;
 use KaziOmar\OmniAuth\Models\AuthSocialAccount;
 use KaziOmar\OmniAuth\OmniAuthManager;
 
@@ -42,6 +44,9 @@ class SocialAuthManager
     {
         $state = $state ?? Str::random(40);
         $config = $this->getProviderConfig($provider);
+
+        // H4: Store state in cache with 15-minute TTL to prevent OAuth CSRF / login injection
+        Cache::put("omni_oauth_state_{$state}", $provider, now()->addMinutes(15));
 
         // 1. If Laravel Socialite is installed, use Socialite driver
         if (class_exists(\Laravel\Socialite\Facades\Socialite::class)) {
@@ -95,8 +100,33 @@ class SocialAuthManager
      */
     public function handleCallback(string $provider, ?string $code = null, array $requestData = []): array
     {
+        // H4: Enforce OAuth CSRF State validation
+        $state = $requestData['state'] ?? request('state');
+        if ($state) {
+            $cachedProvider = Cache::pull("omni_oauth_state_{$state}");
+            if (!$cachedProvider || $cachedProvider !== $provider) {
+                throw new InvalidArgumentException('Invalid or expired OAuth state parameter. Possible CSRF attack detected.');
+            }
+        }
+
         $profile = $this->resolveProviderProfile($provider, $code, $requestData);
         $user = $this->findOrCreateUserForProfile($provider, $profile);
+
+        // C3: Enforce Two-Factor Authentication on Social Login
+        if (Features::enabled(Features::twoFactorAuth()) && $this->authManager->twoFactor()->isEnabled($user)) {
+            $challengeToken = $this->authManager->twoFactor()->createChallengeToken($user);
+            return [
+                'response' => response()->json([
+                    'ok' => true,
+                    'message' => 'Two-factor authentication required.',
+                    'data' => [
+                        'requires_2fa' => true,
+                        'two_factor_token' => $challengeToken,
+                    ],
+                ], 200),
+                'user' => $user,
+            ];
+        }
 
         $response = $this->authManager->respondWithDualModeTokens($user);
 
@@ -122,6 +152,23 @@ class SocialAuthManager
         };
 
         $user = $this->findOrCreateUserForProfile($provider, $profile);
+
+        // C3: Enforce Two-Factor Authentication on Mobile Social Token Exchange
+        if (Features::enabled(Features::twoFactorAuth()) && $this->authManager->twoFactor()->isEnabled($user)) {
+            $challengeToken = $this->authManager->twoFactor()->createChallengeToken($user);
+            return [
+                'response' => response()->json([
+                    'ok' => true,
+                    'message' => 'Two-factor authentication required.',
+                    'data' => [
+                        'requires_2fa' => true,
+                        'two_factor_token' => $challengeToken,
+                    ],
+                ], 200),
+                'user' => $user,
+            ];
+        }
+
         $response = $this->authManager->respondWithDualModeTokens($user);
 
         return [
@@ -155,7 +202,11 @@ class SocialAuthManager
             $config['mobile_client_ids'] ?? []
         ));
 
-        if (!empty($validAudiences) && !in_array($data['aud'] ?? '', $validAudiences, true)) {
+        if (empty($validAudiences)) {
+            throw new InvalidArgumentException('Google client_id or mobile_client_ids must be configured to verify Google ID tokens.');
+        }
+
+        if (!in_array($data['aud'] ?? '', $validAudiences, true)) {
             throw new InvalidArgumentException('Google ID token audience mismatch.');
         }
 
@@ -178,6 +229,7 @@ class SocialAuthManager
 
     /**
      * Verify an Apple identity token (JWT) and extract user identity.
+     * Enforces RS256 algorithm verification (blocking alg: none) and cryptographic signature validation.
      *
      * @param array<string, mixed> $extra
      * @return array{id: string, email: ?string, name: ?string, avatar: null, email_verified: bool, data: array}
@@ -187,6 +239,14 @@ class SocialAuthManager
         $parts = explode('.', $idToken);
         if (count($parts) !== 3) {
             throw new InvalidArgumentException('Invalid Apple identity token format.');
+        }
+
+        $headerJson = $this->base64UrlDecode($parts[0]);
+        $header = json_decode($headerJson, true);
+
+        // C1: Prevent alg: none attack and enforce RS256
+        if (!is_array($header) || ($header['alg'] ?? '') !== 'RS256' || empty($header['kid'])) {
+            throw new InvalidArgumentException('Apple identity token must use RS256 algorithm with valid kid header.');
         }
 
         $payloadJson = $this->base64UrlDecode($parts[1]);
@@ -206,10 +266,59 @@ class SocialAuthManager
             throw new InvalidArgumentException('Apple identity token has expired.');
         }
 
-        // Verify audience if configured
+        // Verify audience
         $config = $this->getProviderConfig('apple');
-        if (!empty($config['client_id']) && ($claims['aud'] ?? '') !== $config['client_id']) {
+        $validAudiences = array_filter(array_merge(
+            [$config['client_id'] ?? null],
+            $config['mobile_client_ids'] ?? []
+        ));
+
+        if (empty($validAudiences)) {
+            throw new InvalidArgumentException('Apple client_id must be configured to verify Apple identity tokens.');
+        }
+
+        if (!in_array($claims['aud'] ?? '', $validAudiences, true)) {
             throw new InvalidArgumentException('Apple identity token audience mismatch.');
+        }
+
+        // Verify nonce if provided in extra
+        if (!empty($extra['nonce'])) {
+            $expectedNonce = hash('sha256', $extra['nonce']);
+            if (($claims['nonce'] ?? '') !== $expectedNonce && ($claims['nonce'] ?? '') !== $extra['nonce']) {
+                throw new InvalidArgumentException('Apple identity token nonce mismatch.');
+            }
+        }
+
+        // C1: Verify cryptographic signature using Apple JWKS or configured test key
+        $signatureVerified = false;
+        $testPublicKey = $config['public_key'] ?? null;
+
+        if ($testPublicKey) {
+            $signatureVerified = (openssl_verify("{$parts[0]}.{$parts[1]}", $this->base64UrlDecode($parts[2]), $testPublicKey, OPENSSL_ALGO_SHA256) === 1);
+        } else {
+            $jwks = Cache::remember('omni_apple_jwks', 86400, function () {
+                $res = Http::timeout(5)->get('https://appleid.apple.com/auth/keys');
+                return $res->successful() ? (array) $res->json('keys') : [];
+            });
+
+            $matchingKey = null;
+            foreach ($jwks as $key) {
+                if (($key['kid'] ?? '') === $header['kid']) {
+                    $matchingKey = $key;
+                    break;
+                }
+            }
+
+            if (!$matchingKey || empty($matchingKey['n']) || empty($matchingKey['e'])) {
+                throw new InvalidArgumentException('Unable to resolve Apple public key for token verification.');
+            }
+
+            $publicKeyPem = $this->rsaJwkToPem($matchingKey['n'], $matchingKey['e']);
+            $signatureVerified = (openssl_verify("{$parts[0]}.{$parts[1]}", $this->base64UrlDecode($parts[2]), $publicKeyPem, OPENSSL_ALGO_SHA256) === 1);
+        }
+
+        if (!$signatureVerified) {
+            throw new InvalidArgumentException('Apple identity token signature verification failed.');
         }
 
         // Apple only sends name on the first authorization
@@ -231,6 +340,46 @@ class SocialAuthManager
             'email_verified' => isset($claims['email_verified']) ? filter_var($claims['email_verified'], FILTER_VALIDATE_BOOLEAN) : true,
             'data' => $claims,
         ];
+    }
+
+    /**
+     * Convert an RSA JWK (n modulus, e exponent) to standard PEM format without third-party dependencies.
+     */
+    public function rsaJwkToPem(string $nB64, string $eB64): string
+    {
+        $n = base64_decode(strtr($nB64, '-_', '+/'));
+        $e = base64_decode(strtr($eB64, '-_', '+/'));
+
+        $encodeLength = function (int $len): string {
+            if ($len <= 0x7F) {
+                return chr($len);
+            }
+            $sub = '';
+            while ($len > 0) {
+                $sub = chr($len & 0xFF) . $sub;
+                $len >>= 8;
+            }
+            return chr(0x80 | strlen($sub)) . $sub;
+        };
+
+        $encodeInteger = function (string $bytes) use ($encodeLength): string {
+            if (ord($bytes[0]) > 0x7F) {
+                $bytes = "\x00" . $bytes;
+            }
+            return "\x02" . $encodeLength(strlen($bytes)) . $bytes;
+        };
+
+        $mod = $encodeInteger($n);
+        $exp = $encodeInteger($e);
+        $seq = $mod . $exp;
+        $der = "\x30" . $encodeLength(strlen($seq)) . $seq;
+
+        // Wrap in SubjectPublicKeyInfo for standard BEGIN PUBLIC KEY
+        $alg = pack('H*', '300d06092a864886f70d0101010500');
+        $bitString = "\x03" . $encodeLength(strlen($der) + 1) . "\x00" . $der;
+        $spki = "\x30" . $encodeLength(strlen($alg . $bitString)) . $alg . $bitString;
+
+        return "-----BEGIN PUBLIC KEY-----\n" . chunk_split(base64_encode($spki), 64) . "-----END PUBLIC KEY-----\n";
     }
 
     /**
@@ -316,12 +465,28 @@ class SocialAuthManager
 
         // 2. Intelligent Account Linking by Email
         $autoLink = (bool) config('omni-auth.social.auto_link_by_email', true);
+        $isEmailVerifiedByProvider = !empty($profile['email_verified']) && $profile['email_verified'] === true;
 
         if ($email && $autoLink) {
             /** @var (Authenticatable&Model)|null $existingUser */
             $existingUser = $userModelClass::where('email', $email)->first();
 
             if ($existingUser) {
+                // C2: Strictly reject linking to existing account if provider has not verified the email
+                if (!$isEmailVerifiedByProvider) {
+                    throw new InvalidArgumentException("Cannot link unverified social email [{$email}] to an existing account.");
+                }
+
+                // C2: Pre-hijacking defense: if the existing account was never email-verified,
+                // purge any pre-existing attacker access tokens and verify the account now
+                if (empty($existingUser->email_verified_at)) {
+                    $existingUser->email_verified_at = now();
+                    if (method_exists($existingUser, 'tokens')) {
+                        $existingUser->tokens()->delete();
+                    }
+                    $existingUser->save();
+                }
+
                 // Link this provider to the existing account
                 AuthSocialAccount::create([
                     'user_id' => $existingUser->getAuthIdentifier(),
@@ -332,12 +497,6 @@ class SocialAuthManager
                     'avatar' => $profile['avatar'] ?? null,
                     'data' => $profile['data'] ?? null,
                 ]);
-
-                // Auto-verify email if provider confirmed it and user is unverified
-                if (empty($existingUser->email_verified_at) && !empty($profile['email_verified'])) {
-                    $existingUser->email_verified_at = now();
-                    $existingUser->save();
-                }
 
                 return $existingUser;
             }
