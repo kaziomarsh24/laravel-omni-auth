@@ -132,4 +132,4 @@ php artisan omni:prune-tokens --days=30
 
 ## Next Steps
 
-With installation complete, review the [Configuration Guide](/getting-started/configuration/) to set token lifetimes, enable optional feature sets, and configure social login providers.
+With installation complete, review the [Configuration Guide](/laravel-omni-auth/getting-started/configuration/) to set token lifetimes, enable optional feature sets, and configure social login providers.

@@ -1,195 +1,297 @@
 /* ==========================================================================
-   VitePress-Grade Modern Theme for Laravel OmniAuth Docs
+   VitePress-Grade High-Contrast Theme for Laravel OmniAuth Docs
    ========================================================================== */
 
-:root {
-  /* Dark Mode Palette (Rich Obsidian & Vibrant Accents) */
-  --sl-color-accent-low: rgba(244, 63, 94, 0.12);
+/* --------------------------------------------------------------------------
+   Dark Mode Root Variables
+   -------------------------------------------------------------------------- */
+:root,
+:root[data-theme='dark'] {
+  --sl-color-accent-low: rgba(244, 63, 94, 0.15);
   --sl-color-accent: #f43f5e;
   --sl-color-accent-high: #fb7185;
-  --sl-color-white: #ffffff;
-  --sl-color-gray-1: #f1f5f9;
-  --sl-color-gray-2: #cbd5e1;
-  --sl-color-gray-3: #94a3b8;
-  --sl-color-gray-4: #64748b;
-  --sl-color-gray-5: #334155;
-  --sl-color-gray-6: #1e293b;
-  --sl-color-black: #0b0c14;
 
   --sl-color-bg: #0b0c14;
-  --sl-color-bg-nav: rgba(11, 12, 20, 0.8);
-  --sl-color-bg-sidebar: #0e101b;
+  --sl-color-bg-nav: rgba(11, 12, 20, 0.85);
+  --sl-color-bg-sidebar: #0e101a;
+  --sl-color-hairline: rgba(255, 255, 255, 0.08);
 
-  --sl-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --sl-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sl-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --sl-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Light Mode Overrides */
+/* --------------------------------------------------------------------------
+   Light Mode Root Variables (High-Contrast & Clean White/Slate)
+   -------------------------------------------------------------------------- */
 :root[data-theme='light'] {
   --sl-color-accent-low: rgba(225, 29, 72, 0.08);
   --sl-color-accent: #e11d48;
-  --sl-color-accent-high: #9f1239;
-  --sl-color-bg: #f8fafc;
-  --sl-color-bg-nav: rgba(248, 250, 252, 0.85);
-  --sl-color-bg-sidebar: #f1f5f9;
+  --sl-color-accent-high: #be123c;
+
+  --sl-color-bg: #ffffff;
+  --sl-color-bg-nav: rgba(255, 255, 255, 0.9);
+  --sl-color-bg-sidebar: #f8fafc;
+  --sl-color-hairline: rgba(0, 0, 0, 0.08);
 }
 
-/* ==========================================================================
-   Header & Navbar (Glassmorphism)
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Logo & Asset Sizing Constraints
+   -------------------------------------------------------------------------- */
+img, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+header a.site-title img,
+header .site-title img {
+  width: 32px !important;
+  height: 32px !important;
+  max-width: 32px !important;
+  object-fit: contain;
+}
+
+.hero img {
+  max-width: 300px !important;
+  width: 100% !important;
+  height: auto !important;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.45));
+}
+
+/* --------------------------------------------------------------------------
+   Header / Navbar
+   -------------------------------------------------------------------------- */
 header {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid var(--sl-color-hairline) !important;
 }
 
-:root[data-theme='light'] header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-/* Site Title Brand Gradient */
 .site-title {
   font-weight: 700 !important;
   letter-spacing: -0.02em;
 }
 
-/* ==========================================================================
-   Hero Section (Vibrant Ambient Mesh & Gradient Typography)
-   ========================================================================== */
-.hero {
-  position: relative;
-  padding-top: 3.5rem !important;
-  padding-bottom: 3.5rem !important;
+/* --------------------------------------------------------------------------
+   Sidebar Navigation & Active Link (Fixing Solid Blob Issue)
+   -------------------------------------------------------------------------- */
+/* Reset Starlight's default solid color background on active links */
+[aria-current='page'],
+[aria-current='page']:hover,
+[aria-current='page']:focus {
+  font-weight: 600 !important;
+  background-color: rgba(244, 63, 94, 0.12) !important;
+  color: #fb7185 !important;
+  border-left: 3px solid #f43f5e !important;
+  border-radius: 0 8px 8px 0 !important;
+  padding-left: 0.75rem !important;
 }
 
-/* Ambient Radial Glow Behind Hero */
+[aria-current='page'] span {
+  color: inherit !important;
+}
+
+:root[data-theme='light'] [aria-current='page'],
+:root[data-theme='light'] [aria-current='page']:hover,
+:root[data-theme='light'] [aria-current='page']:focus {
+  background-color: rgba(225, 29, 72, 0.08) !important;
+  color: #e11d48 !important;
+  border-left: 3px solid #e11d48 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Markdown Typography & Contrast (Fixing Invisible Light Mode Headers)
+   -------------------------------------------------------------------------- */
+/* Dark Mode Headings */
+:root[data-theme='dark'] .sl-markdown-content h1,
+:root[data-theme='dark'] .sl-markdown-content h2,
+:root[data-theme='dark'] .sl-markdown-content h3,
+:root[data-theme='dark'] .sl-markdown-content h4 {
+  color: #f8fafc !important;
+}
+
+:root[data-theme='dark'] .sl-markdown-content p,
+:root[data-theme='dark'] .sl-markdown-content li {
+  color: #cbd5e1 !important;
+}
+
+/* Light Mode Headings (CRITICAL: Must NEVER be white) */
+:root[data-theme='light'] .sl-markdown-content h1,
+:root[data-theme='light'] .sl-markdown-content h2,
+:root[data-theme='light'] .sl-markdown-content h3,
+:root[data-theme='light'] .sl-markdown-content h4 {
+  color: #0f172a !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content p,
+:root[data-theme='light'] .sl-markdown-content li {
+  color: #334155 !important;
+}
+
+:root[data-theme='light'] .sl-markdown-content strong {
+  color: #0f172a !important;
+}
+
+/* --------------------------------------------------------------------------
+   Hero Section
+   -------------------------------------------------------------------------- */
+.hero {
+  position: relative;
+  padding: 3rem 0 !important;
+}
+
 .hero::before {
   content: '';
   position: absolute;
-  top: 10%;
+  top: 15%;
   left: 50%;
   transform: translate(-50%, -20%);
-  width: 650px;
-  height: 420px;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.18) 0%, rgba(99, 102, 241, 0.15) 40%, transparent 70%);
+  width: 580px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.2) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 70%);
   filter: blur(60px);
   pointer-events: none;
   z-index: -1;
 }
 
-/* Hero Title Gradient */
-.hero h1 {
-  font-size: clamp(2.5rem, 6vw, 4rem) !important;
+:root[data-theme='dark'] .hero h1 {
+  font-size: clamp(2.4rem, 5vw, 3.8rem) !important;
   font-weight: 800 !important;
-  letter-spacing: -0.035em !important;
-  line-height: 1.1 !important;
-  background: linear-gradient(135deg, #ffffff 20%, #f43f5e 75%, #c084fc 100%);
+  letter-spacing: -0.03em !important;
+  background: linear-gradient(135deg, #ffffff 25%, #f43f5e 75%, #c084fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 1.25rem !important;
 }
 
 :root[data-theme='light'] .hero h1 {
-  background: linear-gradient(135deg, #0f172a 30%, #e11d48 80%, #7c3aed 100%);
+  font-size: clamp(2.4rem, 5vw, 3.8rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  background: linear-gradient(135deg, #0f172a 35%, #e11d48 85%, #7c3aed 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Hero Tagline */
 .hero .tagline {
-  font-size: 1.2rem !important;
-  color: var(--sl-color-gray-2) !important;
+  font-size: 1.15rem !important;
   line-height: 1.6 !important;
-  max-width: 680px;
+  max-width: 660px;
   margin: 0 auto 2rem auto;
 }
 
-/* Action Buttons (VitePress Style Pill Glow) */
+:root[data-theme='dark'] .hero .tagline {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme='light'] .hero .tagline {
+  color: #475569 !important;
+}
+
+/* Action Buttons */
 .hero .action.primary {
   background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
   border-radius: 9999px !important;
   padding: 0.75rem 1.75rem !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 20px -2px rgba(244, 63, 94, 0.45) !important;
+  box-shadow: 0 4px 18px -2px rgba(244, 63, 94, 0.45) !important;
+  border: none !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .hero .action.primary:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 25px -2px rgba(244, 63, 94, 0.6) !important;
+  box-shadow: 0 8px 24px -2px rgba(244, 63, 94, 0.6) !important;
 }
 
 .hero .action.secondary {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: var(--sl-color-white) !important;
   border-radius: 9999px !important;
   padding: 0.75rem 1.75rem !important;
   font-weight: 600 !important;
-  backdrop-filter: blur(8px) !important;
   transition: all 0.25s ease !important;
 }
 
-.hero .action.secondary:hover {
+:root[data-theme='dark'] .hero .action.secondary {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #f8fafc !important;
+}
+
+:root[data-theme='dark'] .hero .action.secondary:hover {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
   transform: translateY(-2px) !important;
 }
 
-/* Hero Image Floating Animation */
-.hero img {
-  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
-  transition: transform 0.4s ease;
+:root[data-theme='light'] .hero .action.secondary {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
-.hero img:hover {
-  transform: scale(1.03) rotate(1deg);
+:root[data-theme='light'] .hero .action.secondary:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  transform: translateY(-2px) !important;
 }
 
-/* ==========================================================================
-   Feature Cards (VitePress Glassmorphism Card Grid)
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Feature Cards
+   -------------------------------------------------------------------------- */
 .card {
-  background: rgba(20, 22, 34, 0.65) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 16px !important;
   padding: 1.75rem !important;
-  backdrop-filter: blur(12px) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative;
-  overflow: hidden;
+}
+
+:root[data-theme='dark'] .card {
+  background: rgba(19, 21, 33, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+:root[data-theme='dark'] .card:hover {
+  border-color: rgba(244, 63, 94, 0.5) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 16px 36px -10px rgba(244, 63, 94, 0.2) !important;
 }
 
 :root[data-theme='light'] .card {
-  background: rgba(255, 255, 255, 0.8) !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
 }
 
-.card:hover {
-  border-color: rgba(244, 63, 94, 0.45) !important;
+:root[data-theme='light'] .card:hover {
+  border-color: #f43f5e !important;
   transform: translateY(-4px) !important;
-  box-shadow: 0 16px 36px -10px rgba(244, 63, 94, 0.2) !important;
+  box-shadow: 0 12px 28px -6px rgba(225, 29, 72, 0.12) !important;
 }
 
 .card .title {
   font-size: 1.15rem !important;
   font-weight: 700 !important;
   letter-spacing: -0.015em !important;
-  color: var(--sl-color-white) !important;
   margin-top: 0.75rem !important;
   margin-bottom: 0.5rem !important;
 }
 
-.card .body {
-  font-size: 0.95rem !important;
-  color: var(--sl-color-gray-3) !important;
-  line-height: 1.6 !important;
+:root[data-theme='dark'] .card .title {
+  color: #f8fafc !important;
 }
 
-/* Glowing Icon Badge in Cards */
+:root[data-theme='light'] .card .title {
+  color: #0f172a !important;
+}
+
+:root[data-theme='dark'] .card .body {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme='light'] .card .body {
+  color: #475569 !important;
+}
+
 .card .icon {
   background: rgba(244, 63, 94, 0.12) !important;
   color: #f43f5e !important;
@@ -199,52 +301,38 @@ header {
   display: inline-flex !important;
 }
 
-/* ==========================================================================
-   Code Blocks & Pre Styling
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Code Blocks (Pre)
+   -------------------------------------------------------------------------- */
 pre {
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 14px !important;
+  border-radius: 12px !important;
+}
+
+:root[data-theme='dark'] pre {
   background-color: #0d0e17 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-theme='light'] pre {
+  background-color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 /* Inline Code */
 :not(pre) > code {
-  background: rgba(244, 63, 94, 0.1) !important;
-  color: #fb7185 !important;
-  border: 1px solid rgba(244, 63, 94, 0.2) !important;
   border-radius: 6px !important;
   padding: 0.15rem 0.4rem !important;
   font-size: 0.88em !important;
 }
 
-/* ==========================================================================
-   Sidebar & Navigation Links
-   ========================================================================== */
-sidebar-nav a {
-  border-radius: 8px !important;
-  transition: all 0.15s ease !important;
+:root[data-theme='dark'] :not(pre) > code {
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: #fb7185 !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
 }
 
-sidebar-nav a[aria-current='page'] {
-  background: var(--sl-color-accent-low) !important;
-  color: var(--sl-color-accent-high) !important;
-  font-weight: 600 !important;
-}
-
-/* ==========================================================================
-   Tables
-   ========================================================================== */
-table {
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  overflow: hidden !important;
-}
-
-th {
-  background: rgba(255, 255, 255, 0.03) !important;
-  font-weight: 600 !important;
+:root[data-theme='light'] :not(pre) > code {
+  background: rgba(225, 29, 72, 0.08) !important;
+  color: #be123c !important;
+  border: 1px solid rgba(225, 29, 72, 0.18) !important;
 }
