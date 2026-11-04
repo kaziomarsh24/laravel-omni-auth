@@ -1,338 +1,806 @@
 ---
-title: Complete API Reference
-description: Comprehensive reference documentation for all 29 OmniAuth endpoints.
+title: Complete API Reference (29 Endpoints)
+description: Production-grade reference specifications for all 29 Laravel OmniAuth endpoints including headers, validation rules, dual-mode payloads, and error schemas.
 ---
 
-This document provides complete technical specifications for all 29 built-in API endpoints registered by Laravel OmniAuth.
+This document provides exhaustive, copy-paste ready technical specifications for all **29 endpoints** registered by Laravel OmniAuth. Every endpoint follows our unified REST schema with explicit parameter rules, header requirements, dual-mode success payloads (Web vs. Mobile), and HTTP error objects.
 
 ---
 
-## Quick Reference Table
+## Quick Reference Directory
 
-| Category | Method | Path | Route Name | Auth Required |
+| Category | Method | Path | Route Name | Authentication |
 | :--- | :--- | :--- | :--- | :--- |
-| **Core** | `POST` | `/api/auth/login` | `omni.login` | No |
-| **Core** | `POST` | `/api/auth/register` | `omni.register` | No |
+| **Core** | `POST` | `/api/auth/login` | `omni.login` | Public |
+| **Core** | `POST` | `/api/auth/register` | `omni.register` | Public |
 | **Core** | `POST` | `/api/auth/refresh` | `omni.refresh` | Refresh Token |
-| **Core** | `POST` | `/api/auth/logout` | `omni.logout` | Yes (`omni.auth`) |
-| **Core** | `GET` | `/api/auth/me` | `omni.me` | Yes (`omni.auth`) |
-| **Devices** | `GET` | `/api/auth/devices` | `omni.devices.index` | Yes (`omni.auth`) |
-| **Devices** | `DELETE` | `/api/auth/devices/{id}` | `omni.devices.destroy` | Yes (`omni.auth`) |
-| **Devices** | `POST` | `/api/auth/devices/logout-others` | `omni.devices.logout_others` | Yes (`omni.auth`) |
-| **Devices** | `POST` | `/api/auth/devices/fcm` | `omni.devices.fcm` | Yes (`omni.auth`) |
+| **Core** | `POST` | `/api/auth/logout` | `omni.logout` | `omni.auth` (Bearer/Cookie) |
+| **Core** | `GET` | `/api/auth/me` | `omni.me` | `omni.auth` (Bearer/Cookie) |
+| **Devices** | `GET` | `/api/auth/devices` | `omni.devices.index` | `omni.auth` (Bearer/Cookie) |
+| **Devices** | `DELETE` | `/api/auth/devices/{id}` | `omni.devices.destroy` | `omni.auth` (Bearer/Cookie) |
+| **Devices** | `POST` | `/api/auth/devices/logout-others` | `omni.devices.logout_others` | `omni.auth` (Bearer/Cookie) |
+| **Devices** | `POST` | `/api/auth/devices/fcm` | `omni.devices.fcm` | `omni.auth` (Bearer/Cookie) |
 | **Two-Factor** | `POST` | `/api/auth/2fa/challenge` | `omni.2fa.challenge` | Challenge Token |
 | **Two-Factor** | `POST` | `/api/auth/2fa/fallback-otp` | `omni.2fa.fallback_otp` | Challenge Token |
-| **Two-Factor** | `POST` | `/api/auth/2fa/setup` | `omni.2fa.setup` | Yes (`omni.auth`) |
-| **Two-Factor** | `POST` | `/api/auth/2fa/confirm` | `omni.2fa.confirm` | Yes (`omni.auth`) |
-| **Two-Factor** | `POST` | `/api/auth/2fa/recovery-codes` | `omni.2fa.recovery_codes` | Yes (`omni.auth`) |
-| **Two-Factor** | `POST` | `/api/auth/2fa/disable` | `omni.2fa.disable` | Yes (`omni.auth`) |
-| **Social** | `POST` | `/api/auth/social/exchange` | `omni.social.exchange` | No |
-| **Social** | `GET` | `/api/auth/social/{provider}/redirect` | `omni.social.redirect` | No |
-| **Social** | `GET\|POST` | `/api/auth/social/{provider}/callback` | `omni.social.callback` | No |
-| **Social** | `GET` | `/api/auth/social/accounts` | `omni.social.accounts` | Yes (`omni.auth`) |
-| **Social** | `DELETE` | `/api/auth/social/{provider}` | `omni.social.unlink` | Yes (`omni.auth`) |
-| **Password** | `POST` | `/api/auth/forgot-password` | `omni.password.forgot` | No |
-| **Password** | `POST` | `/api/auth/verify-reset-otp` | `omni.password.verify_otp` | No |
-| **Password** | `POST` | `/api/auth/reset-password` | `omni.password.reset` | No |
-| **Magic Link** | `POST` | `/api/auth/magic-link` | `omni.magic.send` | No |
-| **Magic Link** | `GET\|POST` | `/api/auth/magic-link/verify` | `omni.magic.verify` | No |
-| **Lifecycle** | `GET\|POST` | `/api/auth/email/verify/{id}/{hash}` | `omni.email.verify` | Signed Route |
-| **Lifecycle** | `POST` | `/api/auth/email/verify` | `omni.email.verify_otp` | Yes (`omni.auth`) |
-| **Lifecycle** | `POST` | `/api/auth/email/resend` | `omni.email.resend` | Yes (`omni.auth`) |
-| **Lifecycle** | `DELETE` | `/api/auth/account` | `omni.account.delete` | Yes (`omni.auth`) |
+| **Two-Factor** | `POST` | `/api/auth/2fa/setup` | `omni.2fa.setup` | `omni.auth` + Password |
+| **Two-Factor** | `POST` | `/api/auth/2fa/confirm` | `omni.2fa.confirm` | `omni.auth` (Bearer/Cookie) |
+| **Two-Factor** | `POST` | `/api/auth/2fa/recovery-codes` | `omni.2fa.recovery_codes` | `omni.auth` + Password |
+| **Two-Factor** | `POST` | `/api/auth/2fa/disable` | `omni.2fa.disable` | `omni.auth` + Password |
+| **Social** | `POST` | `/api/auth/social/exchange` | `omni.social.exchange` | Public |
+| **Social** | `GET` | `/api/auth/social/{provider}/redirect` | `omni.social.redirect` | Public |
+| **Social** | `GET\|POST` | `/api/auth/social/{provider}/callback` | `omni.social.callback` | Public (OAuth State) |
+| **Social** | `GET` | `/api/auth/social/accounts` | `omni.social.accounts` | `omni.auth` (Bearer/Cookie) |
+| **Social** | `DELETE` | `/api/auth/social/{provider}` | `omni.social.unlink` | `omni.auth` (Bearer/Cookie) |
+| **Password** | `POST` | `/api/auth/forgot-password` | `omni.password.forgot` | Public |
+| **Password** | `POST` | `/api/auth/verify-reset-otp` | `omni.password.verify_otp` | Public |
+| **Password** | `POST` | `/api/auth/reset-password` | `omni.password.reset` | Public (Reset Token) |
+| **Magic Link** | `POST` | `/api/auth/magic-link` | `omni.magic.send` | Public |
+| **Magic Link** | `GET\|POST` | `/api/auth/magic-link/verify` | `omni.magic.verify` | Public (Magic Token) |
+| **Lifecycle** | `GET\|POST` | `/api/auth/email/verify/{id}/{hash}` | `omni.email.verify` | Signed Route (Browser) |
+| **Lifecycle** | `POST` | `/api/auth/email/verify` | `omni.email.verify_otp` | `omni.auth` (Bearer/Cookie) |
+| **Lifecycle** | `POST` | `/api/auth/email/resend` | `omni.email.resend` | `omni.auth` (Bearer/Cookie) |
+| **Lifecycle** | `DELETE` | `/api/auth/account` | `omni.account.delete` | `omni.auth` + Password |
 
 ---
 
 ## 1. Core Authentication
 
 ### `POST /api/auth/login`
-Authenticates user with email/username and password.
+Authenticates user credentials and issues dual-mode tokens (SameSite HttpOnly cookies for web browsers or direct Bearer tokens for mobile apps).
 
+- **Route Name**: `omni.login`
+- **Authentication**: Public (None)
 - **Headers**:
-  - `Accept: application/json`
-  - `X-Client-Type: mobile` (optional, delivers tokens in body instead of cookies)
-- **Request Body**:
+  ```http
+  Accept: application/json
+  Content-Type: application/json
+  X-Client-Type: mobile (optional, forces Bearer tokens in JSON body)
+  ```
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `email` | `string` | Yes | Registered email (or configured identifier column) | `"jane@example.com"` |
+| `password` | `string` | Yes | Plaintext user password | `"Secret123!"` |
+| `device_name` | `string` | No | Optional human-readable device name | `"iPhone 15 Pro"` |
+
+#### Success Response: 200 OK (Web SPA Mode)
+Sets `omni_access_token` and `omni_refresh_token` in HttpOnly cookies. The response payload omits token strings to prevent XSS copying.
 ```json
 {
-  "email": "user@example.com",
-  "password": "Password123!"
+  "ok": true,
+  "message": "Logged in successfully.",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "roles": ["developer"],
+      "permissions": ["deploy-apps"]
+    }
+  }
 }
 ```
-- **Responses**:
-  - `200 OK`: Standard login success (tokens returned in JSON for mobile or cookies set for web).
-  - `200 OK` (`status: "requires_2fa"`): Two-factor authentication required; returns `challenge_token`.
-  - `401 Unauthorized`: Invalid credentials (constant-time response).
-  - `422 Unprocessable Entity`: Validation failure.
-  - `429 Too Many Requests`: Rate limit exceeded.
+
+#### Success Response: 200 OK (Mobile Client Mode — `X-Client-Type: mobile`)
+Delivers tokens directly in JSON for storage in iOS Keychain / Android Keystore.
+```json
+{
+  "ok": true,
+  "message": "Logged in successfully.",
+  "data": {
+    "access_token": "1|qX8yZ9aB...",
+    "refresh_token": "2|mK9zW1pQ...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "tokens": {
+      "access_token": "1|qX8yZ9aB...",
+      "refresh_token": "2|mK9zW1pQ...",
+      "token_type": "Bearer",
+      "expires_in": 900
+    },
+    "user": {
+      "id": 1,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "roles": ["developer"],
+      "permissions": ["deploy-apps"]
+    }
+  }
+}
+```
+
+#### Success Response: 200 OK (When 2FA is Active on Account)
+Returns an encrypted challenge token valid for 5 minutes instead of access tokens.
+```json
+{
+  "ok": true,
+  "message": "Two-factor authentication is required.",
+  "data": {
+    "requires_2fa": true,
+    "two_factor_token": "2fa_ch_9a8b7c6d5e4f3a2b1...",
+    "expires_in": 300
+  }
+}
+```
+
+#### Error Responses
+- **401 Unauthorized** (Invalid credentials):
+  ```json
+  {
+    "ok": false,
+    "message": "Invalid login credentials."
+  }
+  ```
+- **422 Unprocessable Entity** (Validation failure):
+  ```json
+  {
+    "message": "The email field is required.",
+    "errors": {
+      "email": ["The email field is required."]
+    }
+  }
+  ```
+- **429 Too Many Requests** (Rate limit exceeded):
+  ```json
+  {
+    "ok": false,
+    "message": "Too many login attempts. Please try again in 52 seconds."
+  }
+  ```
 
 ---
 
 ### `POST /api/auth/register`
-Creates a new user account.
+Registers a new user record, assigns configured default roles, and automatically logs in the client.
 
-- **Request Body**:
+- **Route Name**: `omni.register`
+- **Authentication**: Public (None)
+- **Headers**:
+  ```http
+  Accept: application/json
+  Content-Type: application/json
+  X-Client-Type: mobile (optional)
+  ```
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `name` | `string` | Yes | Full display name | `"Jane Doe"` |
+| `email` | `string` | Yes | Unique valid email address | `"jane@example.com"` |
+| `password` | `string` | Yes | Password matching strength rules | `"Secret123!"` |
+| `password_confirmation` | `string` | Yes | Password confirmation | `"Secret123!"` |
+
+#### Success Response: 201 Created
 ```json
 {
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "password": "Password123!",
-  "password_confirmation": "Password123!"
+  "ok": true,
+  "message": "User registered and authenticated successfully.",
+  "data": {
+    "access_token": "3|aBcD1234...",
+    "refresh_token": "4|eFgH5678...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "user": {
+      "id": 2,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "roles": ["customer"]
+    }
+  }
 }
 ```
-- **Responses**:
-  - `201 Created`: User created and automatically logged in.
-  - `422 Unprocessable Entity`: Validation failure or existing email.
+
+#### Error Responses
+- **422 Unprocessable Entity** (Duplicate email):
+  ```json
+  {
+    "message": "The email has already been taken.",
+    "errors": {
+      "email": ["The email has already been taken."]
+    }
+  }
+  ```
 
 ---
 
 ### `POST /api/auth/refresh`
-Rotates a sliding refresh token and returns a new access token.
+Rotates single-use refresh token and issues a fresh access token. Enforces automatic replay attack lockout.
 
+- **Route Name**: `omni.refresh`
+- **Authentication**: Valid Refresh Token (Cookie for Web, Bearer or Body for Mobile)
 - **Headers**:
-  - `Authorization: Bearer <refresh_token>` (for mobile clients)
-- **Request Body** (optional if provided in header or cookie):
+  ```http
+  Accept: application/json
+  Authorization: Bearer <refresh_token> (mobile)
+  X-Client-Type: mobile (optional)
+  ```
+
+#### Request Parameters (Mobile Fallback)
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `refresh_token` | `string` | No | Refresh token if not sent in Authorization header | `"4|eFgH5678..."` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "refresh_token": "2|k9m..."
+  "ok": true,
+  "message": "Token refreshed successfully.",
+  "data": {
+    "access_token": "5|jKlM9012...",
+    "refresh_token": "6|nOpQ3456...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "user": {
+      "id": 2,
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
+  }
 }
 ```
-- **Responses**:
-  - `200 OK`: New access token and rotated refresh token.
-  - `401 Unauthorized`: Token expired, invalid, or already consumed.
+
+#### Error Responses
+- **401 Unauthorized** (Expired or already-rotated token):
+  ```json
+  {
+    "ok": false,
+    "message": "Invalid or expired refresh token."
+  }
+  ```
+- **401 Unauthorized** (Replay attack detected):
+  ```json
+  {
+    "ok": false,
+    "message": "Security alert: Token reuse detected. All active sessions have been terminated for security. Please log in again."
+  }
+  ```
 
 ---
 
 ### `POST /api/auth/logout`
-Terminates the current authenticated session and revokes tokens.
+Revokes the current access token and clears all HttpOnly authentication cookies.
 
-- **Middleware**: `omni.auth`
-- **Responses**:
-  - `200 OK`: Session terminated.
-  - `401 Unauthorized`: Unauthenticated.
+- **Route Name**: `omni.logout`
+- **Authentication**: Required (`omni.auth`)
+- **Headers**:
+  ```http
+  Accept: application/json
+  Authorization: Bearer <access_token> (mobile)
+  ```
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `all_devices` | `boolean` | No | If true, revokes tokens on all devices | `true` |
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Logged out successfully."
+}
+```
+
+#### Error Response: 401 Unauthorized
+```json
+{
+  "ok": false,
+  "message": "Unauthenticated."
+}
+```
 
 ---
 
 ### `GET /api/auth/me`
-Retrieves the profile of the currently authenticated user.
+Returns the user profile with active Spatie roles and permissions.
 
-- **Middleware**: `omni.auth`
-- **Responses**:
-  - `200 OK`: Returns user profile resource, including roles/permissions if enabled.
+- **Route Name**: `omni.me`
+- **Authentication**: Required (`omni.auth`)
+- **Headers**:
+  ```http
+  Accept: application/json
+  Authorization: Bearer <access_token> (mobile)
+  ```
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "email_verified_at": "2026-11-04T12:00:00.000000Z",
+      "two_factor_enabled": true,
+      "roles": ["developer", "admin"],
+      "permissions": ["view-analytics", "manage-users"]
+    }
+  }
+}
+```
 
 ---
 
-## 2. Device Management
+## 2. Multi-Device Management
 
 ### `GET /api/auth/devices`
-Lists all active sessions linked to the user account.
+Returns all active logged-in devices and sessions for the authenticated user.
 
-- **Middleware**: `omni.auth`
-- **Responses**:
-  - `200 OK`: Array of device records with `is_current` boolean indicator.
+- **Route Name**: `omni.devices.index`
+- **Authentication**: Required (`omni.auth`)
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "data": {
+    "devices": [
+      {
+        "id": 1,
+        "device_id": "iphone-uuid-1234",
+        "device_name": "iPhone 15 Pro",
+        "platform": "ios",
+        "browser": "OmniApp/1.0.0",
+        "ip_address": "192.168.1.50",
+        "is_current": true,
+        "last_active_at": "2026-11-04T12:00:00.000000Z"
+      },
+      {
+        "id": 2,
+        "device_id": "chrome-mac-uuid",
+        "device_name": "Chrome on macOS",
+        "platform": "web",
+        "browser": "Chrome 128.0",
+        "ip_address": "203.0.113.10",
+        "is_current": false,
+        "last_active_at": "2026-11-03T18:30:00.000000Z"
+      }
+    ]
+  }
+}
+```
 
 ---
 
 ### `DELETE /api/auth/devices/{id}`
-Revokes a specific remote device session.
+Revokes a specific remote device session and destroys its refresh token.
 
-- **Middleware**: `omni.auth`
-- **Responses**:
-  - `200 OK`: Device and associated refresh token revoked.
-  - `404 Not Found`: Device ID does not belong to user.
+- **Route Name**: `omni.devices.destroy`
+- **Authentication**: Required (`omni.auth`)
+- **URL Parameters**:
+  - `id`: Numeric ID of the device record to terminate.
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Device session successfully revoked."
+}
+```
+
+#### Error Response: 404 Not Found
+```json
+{
+  "ok": false,
+  "message": "Device session not found or already revoked."
+}
+```
 
 ---
 
 ### `POST /api/auth/devices/logout-others`
-Revokes all active sessions except the one making the request.
+Terminates all other logged-in device sessions except the current request.
 
-- **Middleware**: `omni.auth`
-- **Responses**:
-  - `200 OK`: Other device sessions terminated.
+- **Route Name**: `omni.devices.logout_others`
+- **Authentication**: Required (`omni.auth`)
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Successfully terminated 3 other device sessions.",
+  "data": {
+    "revoked_count": 3
+  }
+}
+```
 
 ---
 
 ### `POST /api/auth/devices/fcm`
-Updates the push notification token (FCM/APNS) for the current device.
+Synchronizes push notification tokens (FCM, APNS, Expo) for the current device session.
 
-- **Middleware**: `omni.auth`
-- **Request Body**:
+- **Route Name**: `omni.devices.fcm`
+- **Authentication**: Required (`omni.auth`)
+- **Headers**:
+  ```http
+  Accept: application/json
+  Authorization: Bearer <access_token>
+  ```
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `fcm_token` | `string` | Yes* | Push token (also accepts `push_token` or headers) | `"ExponentPushToken[abc123xyz]"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "fcm_token": "fcm_token_string..."
+  "ok": true,
+  "message": "FCM token updated successfully.",
+  "data": {
+    "device": {
+      "id": 1,
+      "device_id": "iphone-uuid-1234",
+      "fcm_token": "ExponentPushToken[abc123xyz]"
+    }
+  }
 }
 ```
-- **Responses**:
-  - `200 OK`: Token updated.
 
 ---
 
 ## 3. Two-Factor Authentication
 
 ### `POST /api/auth/2fa/challenge`
-Verifies a 6-digit TOTP code or recovery code during login (accepts `two_factor_token` or `challenge_token`).
+Resolves a temporary pre-authentication challenge token using a TOTP 6-digit code or recovery code.
 
-- **Request Body**:
+- **Route Name**: `omni.2fa.challenge`
+- **Authentication**: Public (Challenge Token)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `two_factor_token` | `string` | Yes | Token returned by login (accepts `challenge_token`) | `"2fa_ch_9a8b7c6d..."` |
+| `code` | `string` | Yes | 6-digit TOTP code or 8-character recovery code | `"482910"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "two_factor_token": "2fa_challenge_abc...",
-  "code": "123456"
+  "ok": true,
+  "message": "Two-factor authentication successful.",
+  "data": {
+    "access_token": "7|pQrS5678...",
+    "refresh_token": "8|tUvW9012...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "user": {
+      "id": 1,
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
+  }
 }
 ```
-- **Responses**:
-  - `200 OK`: Challenge completed; returns access and refresh tokens.
-  - `422 Unprocessable Entity`: Invalid or expired challenge token, or incorrect code.
+
+#### Error Response: 422 Unprocessable Entity
+```json
+{
+  "ok": false,
+  "message": "Invalid or expired two-factor code."
+}
+```
 
 ---
 
 ### `POST /api/auth/2fa/fallback-otp`
-Requests an emergency SMS or email OTP fallback when authenticator is unavailable (accepts `two_factor_token` or `challenge_token`).
+Requests an emergency one-time fallback code via notification when authenticator is inaccessible.
 
-- **Request Body**:
+- **Route Name**: `omni.2fa.fallback_otp`
+- **Authentication**: Public (Challenge Token)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `two_factor_token` | `string` | Yes | Active challenge token | `"2fa_ch_9a8b7c6d..."` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "two_factor_token": "2fa_challenge_abc..."
+  "ok": true,
+  "message": "A fallback one-time passcode has been sent."
 }
 ```
 
 ---
 
 ### `POST /api/auth/2fa/setup`
-Initiates TOTP configuration. Requires password re-authentication.
+Initiates TOTP setup, generating a secret key, QR code SVG, and 8 recovery codes.
 
-- **Middleware**: `omni.auth`
-- **Request Body**:
+- **Route Name**: `omni.2fa.setup`
+- **Authentication**: Required (`omni.auth`) + Current Password Confirmation
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `password` | `string` | Yes* | User's current password (*required if password exists) | `"Secret123!"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "password": "Password123!"
+  "ok": true,
+  "message": "Two-factor setup initiated. Confirm with a valid code from your authenticator app to enable.",
+  "data": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qr_code_url": "otpauth://totp/LaravelOmniAuth:jane@example.com?secret=JBSWY3DPEHPK3PXP&issuer=LaravelOmniAuth",
+    "svg_qr": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>...</svg>",
+    "recovery_codes": [
+      "A1B2-C3D4",
+      "E5F6-G7H8",
+      "I9J0-K1L2",
+      "M3N4-O5P6",
+      "Q7R8-S9T0",
+      "U1V2-W3X4",
+      "Y5Z6-A7B8",
+      "C9D0-E1F2"
+    ]
+  }
 }
 ```
-- **Responses**:
-  - `200 OK`: Returns base32 secret, OTPAuth URI, SVG QR code, and plaintext recovery codes.
 
 ---
 
 ### `POST /api/auth/2fa/confirm`
-Confirms and activates TOTP 2FA using code from authenticator app.
+Confirms setup by verifying the first 6-digit code from the authenticator app.
 
-- **Middleware**: `omni.auth`
-- **Request Body**:
+- **Route Name**: `omni.2fa.confirm`
+- **Authentication**: Required (`omni.auth`)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `code` | `string` | Yes | 6-digit TOTP code generated by authenticator app | `"482910"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "code": "123456"
+  "ok": true,
+  "message": "Two-factor authentication has been confirmed and enabled."
 }
 ```
 
 ---
 
 ### `POST /api/auth/2fa/recovery-codes`
-Generates fresh backup recovery codes. Requires password re-authentication.
+Invalidates existing recovery codes and generates eight fresh single-use recovery codes.
 
-- **Middleware**: `omni.auth`
-- **Request Body**:
+- **Route Name**: `omni.2fa.recovery_codes`
+- **Authentication**: Required (`omni.auth`) + Password Confirmation
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `password` | `string` | Yes | Current password for re-authentication | `"Secret123!"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "password": "Password123!"
+  "ok": true,
+  "message": "New recovery codes generated. Store them in a secure place.",
+  "data": {
+    "recovery_codes": [
+      "B2C3-D4E5",
+      "F6G7-H8I9",
+      "J0K1-L2M3",
+      "N4O5-P6Q7",
+      "R8S9-T0U1",
+      "V2W3-X4Y5",
+      "Z6A7-B8C9",
+      "D0E1-F2G3"
+    ]
+  }
 }
 ```
 
 ---
 
 ### `POST /api/auth/2fa/disable`
-Disables Two-Factor Authentication. Requires password re-authentication.
+Disables Two-Factor Authentication and purges stored TOTP secrets and recovery codes.
 
-- **Middleware**: `omni.auth`
-- **Request Body**:
+- **Route Name**: `omni.2fa.disable`
+- **Authentication**: Required (`omni.auth`) + Password Confirmation
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `password` | `string` | Yes | Current password confirmation | `"Secret123!"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "password": "Password123!"
+  "ok": true,
+  "message": "Two-factor authentication has been disabled."
 }
 ```
 
 ---
 
-## 4. Social Authentication
+## 4. Social Authentication & Token Exchange
 
 ### `POST /api/auth/social/exchange`
-Direct native mobile ID token exchange for Google and Apple.
+Exchanges a native mobile ID Token (Google ID Token or Apple Identity JWT) for authentication tokens.
 
-- **Request Body**:
+- **Route Name**: `omni.social.exchange`
+- **Authentication**: Public (Mobile ID Token)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `provider` | `string` | Yes | Social provider (`google` or `apple`) | `"apple"` |
+| `id_token` | `string` | Yes | Cryptographic token (also accepts `token`) | `"eyJhbGciOiJSUzI1NiIs..."` |
+| `name` | `string` | No | Optional display name (Apple initial authorization) | `"Jane Doe"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "provider": "apple",
-  "id_token": "eyJhbGciOiJSUzI1Ni..."
+  "ok": true,
+  "message": "Authenticated successfully.",
+  "data": {
+    "access_token": "9|aBcD1234...",
+    "refresh_token": "10|eFgH5678...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "user": {
+      "id": 15,
+      "name": "Jane Doe",
+      "email": "jane@privaterelay.appleid.com"
+    }
+  }
 }
 ```
-- **Responses**:
-  - `200 OK`: Returns user profile and session tokens.
-  - `200 OK` (`status: "requires_2fa"`): Returns challenge token if user has 2FA enabled.
-  - `400 Bad Request`: Invalid or unverified token.
 
 ---
 
 ### `GET /api/auth/social/{provider}/redirect`
-Redirects browser to OAuth provider authorization screen.
+Generates an encrypted OAuth2 authorization URL with state CSRF token.
 
-- **Parameters**: `provider` (`google`, `apple`, `github`, `facebook`)
+- **Route Name**: `omni.social.redirect`
+- **Authentication**: Public (None)
+- **URL Parameters**:
+  - `provider`: Social provider name (`google`, `apple`, `github`).
+
+#### Success Response: 200 OK (JSON) or 302 Redirect (Browser)
+```json
+{
+  "ok": true,
+  "redirect_url": "https://accounts.google.com/o/oauth2/v2/auth?client_id=...&state=abc123"
+}
+```
 
 ---
 
 ### `GET|POST /api/auth/social/{provider}/callback`
-Handles OAuth 2.0 callback from provider. Requires valid `state` parameter.
+Handles the OAuth2 provider callback, verifies state, and logs the user in.
+
+- **Route Name**: `omni.social.callback`
+- **Authentication**: Public (OAuth State Validation)
+
+#### Query / Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `code` | `string` | Yes | OAuth2 authorization code | `"4/0AVG7as9..."` |
+| `state` | `string` | Yes | CSRF verification state token | `"abc123xyz"` |
 
 ---
 
 ### `GET /api/auth/social/accounts`
 Lists all social identities linked to the authenticated user.
 
-- **Middleware**: `omni.auth`
+- **Route Name**: `omni.social.accounts`
+- **Authentication**: Required (`omni.auth`)
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "data": {
+    "accounts": [
+      {
+        "id": 1,
+        "provider": "google",
+        "provider_id": "google-sub-12345",
+        "created_at": "2026-11-04T12:00:00Z"
+      }
+    ]
+  }
+}
+```
 
 ---
 
 ### `DELETE /api/auth/social/{provider}`
-Unlinks a social identity from the user account.
+Unlinks a specific third-party provider identity from the account.
 
-- **Middleware**: `omni.auth`
+- **Route Name**: `omni.social.unlink`
+- **Authentication**: Required (`omni.auth`)
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Successfully unlinked google account."
+}
+```
 
 ---
 
 ## 5. Password Reset
 
 ### `POST /api/auth/forgot-password`
-Dispatches a password reset link or 6-digit OTP code to the provided email.
+Generates a cryptographic 6-digit numeric OTP and dispatches a password reset notification.
 
-- **Request Body**:
+- **Route Name**: `omni.password.forgot`
+- **Authentication**: Public (None)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `email` | `string` | Yes | User's registered email address | `"jane@example.com"` |
+| `redirect_url` | `string` | No | Optional frontend web reset link | `"https://app.example.com/reset"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "email": "user@example.com",
-  "redirect_url": "https://app.example.com/reset-password"
+  "ok": true,
+  "message": "If an account exists for this email, a verification code has been sent."
 }
 ```
 
 ---
 
 ### `POST /api/auth/verify-reset-otp`
-Validates a 6-digit password reset OTP and exchanges it for a temporary reset token (accepts `otp` or `code`).
+Validates the 6-digit OTP and exchanges it for a temporary password reset token.
 
-- **Request Body**:
+- **Route Name**: `omni.password.verify_otp`
+- **Authentication**: Public (None)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `email` | `string` | Yes | Registered email address | `"jane@example.com"` |
+| `otp` | `string` | Yes | 6-digit numeric code (also accepts `code`) | `"654321"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "email": "user@example.com",
-  "otp": "654321"
+  "ok": true,
+  "message": "Code verified successfully.",
+  "data": {
+    "reset_token": "pw_reset_9a8b7c6d5e4f3a2b1..."
+  }
+}
+```
+
+#### Error Response: 422 Unprocessable Entity
+```json
+{
+  "ok": false,
+  "message": "Invalid or expired verification code."
 }
 ```
 
 ---
 
 ### `POST /api/auth/reset-password`
-Updates password using reset token.
+Updates the password using the reset token and revokes all active sessions.
 
-- **Request Body**:
+- **Route Name**: `omni.password.reset`
+- **Authentication**: Public (Reset Token)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `token` | `string` | Yes | Temporary reset token from verify-reset-otp | `"pw_reset_9a8b7..."` |
+| `password` | `string` | Yes | New password | `"NewSecret123!"` |
+| `password_confirmation` | `string` | Yes | Confirmation of new password | `"NewSecret123!"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "email": "user@example.com",
-  "token": "reset_token_here...",
-  "password": "NewSecurePassword123!",
-  "password_confirmation": "NewSecurePassword123!"
+  "ok": true,
+  "message": "Your password has been reset successfully. All active sessions have been terminated."
 }
 ```
 
@@ -341,64 +809,128 @@ Updates password using reset token.
 ## 6. Passwordless Magic Links
 
 ### `POST /api/auth/magic-link`
-Generates and emails a single-use login link.
+Generates a cryptographically signed magic login link and sends it via email.
 
-- **Request Body**:
+- **Route Name**: `omni.magic.send`
+- **Authentication**: Public (None)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `email` | `string` | Yes | Registered email address | `"jane@example.com"` |
+| `redirect_url` | `string` | No | Whitelisted domain redirect target | `"https://app.example.com/callback"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "email": "user@example.com",
-  "redirect_url": "https://app.example.com/auth/callback"
+  "ok": true,
+  "message": "If an account exists with this email, a login link has been dispatched."
 }
 ```
 
 ---
 
 ### `GET|POST /api/auth/magic-link/verify`
-Consumes the magic link token and authenticates the session.
+Verifies magic link token and authenticates the session.
 
-- **Request Body / Query Parameter**:
+- **Route Name**: `omni.magic.verify`
+- **Authentication**: Public (Magic Token)
+
+#### Request / Query Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `token` | `string` | Yes | Single-use magic token (query param or POST body) | `"9f8e7d6c5b4a3..."` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "token": "magic_token_string..."
+  "ok": true,
+  "message": "Logged in successfully via magic link.",
+  "data": {
+    "access_token": "11|mNoP9012...",
+    "refresh_token": "12|qRsT3456...",
+    "token_type": "Bearer",
+    "expires_in": 900,
+    "user": {
+      "id": 1,
+      "email": "jane@example.com"
+    }
+  }
 }
 ```
 
 ---
 
-## 7. Lifecycle & Verification
+## 7. Email Verification & Lifecycle
 
 ### `GET|POST /api/auth/email/verify/{id}/{hash}`
-Verifies email address via cryptographically signed route.
+Signed browser route clicked directly from verification emails.
+
+- **Route Name**: `omni.email.verify`
+- **Authentication**: URL Signature (`expires`, `signature`)
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Email address has been verified successfully."
+}
+```
 
 ---
 
 ### `POST /api/auth/email/verify`
-Verifies email address using 6-digit OTP code (accepts `otp` or `code`).
+Verifies email address using mobile 6-digit numeric OTP.
 
-- **Middleware**: `omni.auth`
-- **Request Body**:
+- **Route Name**: `omni.email.verify_otp`
+- **Authentication**: Required (`omni.auth`)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `otp` | `string` | Yes | 6-digit OTP code (also accepts `code`) | `"849201"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "otp": "819234"
+  "ok": true,
+  "message": "Email address has been verified successfully."
 }
 ```
 
 ---
 
 ### `POST /api/auth/email/resend`
-Resends the email verification notification.
+Dispatches a new email verification code/link to the authenticated user.
 
-- **Middleware**: `omni.auth`
+- **Route Name**: `omni.email.resend`
+- **Authentication**: Required (`omni.auth`)
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Email verification code has been dispatched."
+}
+```
 
 ---
 
 ### `DELETE /api/auth/account`
-Permanently deletes the authenticated user account and cascades credential revocation.
+Permanently deletes the authenticated user account and executes cascading cleanup of devices, tokens, and 2FA credentials.
 
-- **Middleware**: `omni.auth`
-- **Request Body** (required if account has a password):
+- **Route Name**: `omni.account.delete`
+- **Authentication**: Required (`omni.auth`) + Password Confirmation (Optional for social-only users)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `password` | `string` | Yes* | User's password (*not required for social-only accounts) | `"Secret123!"` |
+
+#### Success Response: 200 OK
 ```json
 {
-  "password": "Password123!"
+  "ok": true,
+  "message": "Your account has been deleted permanently along with all active sessions."
 }
 ```
