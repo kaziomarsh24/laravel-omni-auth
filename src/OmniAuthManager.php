@@ -2,13 +2,19 @@
 
 namespace KaziOmar\OmniAuth;
 
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class OmniAuthManager
 {
@@ -18,33 +24,71 @@ class OmniAuthManager
     ) {}
 
     /**
-     * Attempt to authenticate a user using credentials (e.g. email & password).
-     * Automatically delivers HttpOnly Cookies for Web clients or Bearer JSON for Mobile clients.
+     * Attempt to authenticate a user using credentials (e.g. email/username/phone & password).
+     * Includes built-in rate limiting, standard auth events, and dual-mode token delivery.
      */
     public function attempt(array $credentials, ?Request $request = null): JsonResponse
     {
         $request = $request ?? request();
+        $guard = config('omni-auth.guard', 'sanctum');
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
 
-        $email = $credentials['email'] ?? null;
+        $identifierColumn = config('omni-auth.identifier_column', 'email');
+        
+        // Auto-detect identifier key if 'email' is not in credentials
+        $identifier = $credentials[$identifierColumn] ?? $credentials['email'] ?? $credentials['username'] ?? $credentials['phone'] ?? null;
         $password = $credentials['password'] ?? null;
 
-        if (!$email || !$password) {
+        if (!$identifier || !$password) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Email and password are required.',
+                'message' => 'Credentials must include an identifier and password.',
             ], 422);
         }
 
-        /** @var Model|null $user */
-        $user = $userModelClass::where('email', $email)->first();
+        // 1. Rate Limiting Check (Brute-Force Protection)
+        $rateLimitingEnabled = config('omni-auth.rate_limiting.enabled', true);
+        $throttleKey = Str::transliterate(Str::lower($identifier) . '|' . $request->ip());
 
+        if ($rateLimitingEnabled) {
+            $maxAttempts = (int) config('omni-auth.rate_limiting.max_attempts', 5);
+            $decaySeconds = (int) config('omni-auth.rate_limiting.decay_seconds', 60);
+
+            if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
+                $seconds = RateLimiter::availableIn($throttleKey);
+
+                return response()->json([
+                    'ok' => false,
+                    'message' => "Too many login attempts. Please try again in {$seconds} seconds.",
+                    'retry_after' => $seconds,
+                ], 429);
+            }
+        }
+
+        // 2. Resolve User from Database
+        /** @var Model|null $user */
+        $user = $userModelClass::where($identifierColumn, $identifier)->first();
+
+        // 3. Verify Password
         if (!$user || !Hash::check($password, (string) $user->getAuthPassword())) {
+            if ($rateLimitingEnabled) {
+                RateLimiter::hit($throttleKey, (int) config('omni-auth.rate_limiting.decay_seconds', 60));
+            }
+
+            event(new Failed($guard, $user, $credentials));
+
             return response()->json([
                 'ok' => false,
-                'message' => 'Invalid email or password.',
+                'message' => 'Invalid credentials.',
             ], 401);
         }
+
+        // 4. Success: Clear Rate Limiter and Dispatch Standard Login Event
+        if ($rateLimitingEnabled) {
+            RateLimiter::clear($throttleKey);
+        }
+
+        event(new Login($guard, $user, false));
 
         return $this->issueTokenResponse($user, $request, 'Logged in successfully.');
     }
@@ -103,7 +147,81 @@ class OmniAuthManager
             ],
         ]);
 
-        return $this->cookieManager->attachTokens($response, $accessToken, $refreshToken);
+        return $this->cookieManager->attachTokens($response, $accessToken, $refreshToken, $request);
+    }
+
+    /**
+     * Refresh an expired access token using a valid single-use refresh token.
+     * Enforces Single-Use Refresh Token Rotation: the old refresh token is revoked immediately.
+     */
+    public function refresh(?Request $request = null): JsonResponse
+    {
+        $request = $request ?? request();
+
+        // 1. Extract Refresh Token from Cookie (Web) or Header/Body (Mobile)
+        $refreshToken = null;
+
+        if ($this->clientDetector->isWeb($request)) {
+            $refreshToken = $this->cookieManager->getRefreshTokenFromCookie($request);
+        }
+
+        if (!$refreshToken) {
+            $refreshToken = $request->header('X-Refresh-Token')
+                ?? $request->input('refresh_token')
+                ?? $this->cookieManager->getRefreshTokenFromCookie($request);
+        }
+
+        if (!$refreshToken) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Refresh token is missing.',
+            ], 401);
+        }
+
+        // 2. Validate Refresh Token via Sanctum
+        $tokenModel = PersonalAccessToken::findToken($refreshToken);
+
+        if (!$tokenModel) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid or expired refresh token.',
+            ], 401);
+        }
+
+        // Ensure token has refresh capability
+        if (!$tokenModel->can('issue-access-token')) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid token capability for refresh.',
+            ], 403);
+        }
+
+        // Check expiration
+        if ($tokenModel->expires_at && $tokenModel->expires_at->isPast()) {
+            $tokenModel->delete();
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Refresh token has expired. Please log in again.',
+            ], 401);
+        }
+
+        $user = $tokenModel->tokenable;
+
+        if (!$user) {
+            $tokenModel->delete();
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Associated user account no longer exists.',
+            ], 401);
+        }
+
+        // 3. Single-Use Rotation: Revoke old refresh token immediately to prevent replay attacks
+        $tokenModel->delete();
+
+        // 4. Issue new token pair
+        return $this->issueTokenResponse($user, $request, 'Token refreshed successfully.');
     }
 
     /**
@@ -116,8 +234,12 @@ class OmniAuthManager
 
         $user = auth($guard)->user();
 
-        if ($user && method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
-            $user->currentAccessToken()->delete();
+        if ($user) {
+            if (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
+                $user->currentAccessToken()->delete();
+            }
+
+            event(new Logout($guard, $user));
         }
 
         $response = response()->json([

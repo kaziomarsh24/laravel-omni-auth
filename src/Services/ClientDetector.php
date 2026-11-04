@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 class ClientDetector
 {
     /**
-     * Determine whether the incoming request originates from a mobile application.
+     * Determine whether the incoming request originates from a mobile application or API client.
      */
     public function isMobile(Request $request): bool
     {
@@ -19,34 +19,50 @@ class ClientDetector
             return strtolower((string) $request->header($headerName)) === strtolower($mobileValue);
         }
 
-        // 2. If client explicitly requests Bearer JSON and does not accept cookies
+        // 2. If client explicitly requests Bearer JSON
         if ($request->hasHeader('Authorization') && str_starts_with((string) $request->header('Authorization'), 'Bearer ')) {
             return true;
         }
 
-        // 3. User-Agent Heuristic (optional fallback)
-        if (config('omni-auth.client_detection.inspect_user_agent', true)) {
-            $userAgent = strtolower((string) $request->userAgent());
+        // 3. User-Agent Heuristic for Native Mobile & API Testing Tools
+        $userAgent = strtolower((string) $request->userAgent());
 
-            // Check for native mobile client runtimes (Flutter, Dart, React Native, OkHttp, Dalvik, iOS CFNetwork)
-            $nativeRuntimes = [
-                'dart',
-                'flutter',
-                'okhttp',
-                'dalvik',
-                'cfnetwork',
-                'alamofire',
-                'postman', // Helpful in API testing tools
-            ];
+        $apiClients = [
+            'dart',
+            'flutter',
+            'okhttp',
+            'dalvik',
+            'cfnetwork',
+            'alamofire',
+            'postman',
+            'insomnia',
+            'curl',
+            'httpie',
+        ];
 
-            foreach ($nativeRuntimes as $runtime) {
-                if (str_contains($userAgent, $runtime)) {
-                    return true;
-                }
+        foreach ($apiClients as $client) {
+            if (str_contains($userAgent, $client)) {
+                return true;
             }
         }
 
-        return false;
+        // 4. If request is pure API (expects JSON) and lacks common browser signatures
+        if ($request->expectsJson() && !empty($userAgent)) {
+            $isBrowser = str_contains($userAgent, 'mozilla') ||
+                         str_contains($userAgent, 'chrome') ||
+                         str_contains($userAgent, 'safari') ||
+                         str_contains($userAgent, 'firefox') ||
+                         str_contains($userAgent, 'edge');
+
+            if (!$isBrowser) {
+                return true;
+            }
+        }
+
+        // 5. Configurable default fallback
+        $defaultClient = config('omni-auth.client_detection.default_client', 'web');
+
+        return strtolower($defaultClient) === 'mobile';
     }
 
     /**

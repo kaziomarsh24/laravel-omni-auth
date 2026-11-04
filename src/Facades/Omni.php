@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @method static \Illuminate\Http\JsonResponse attempt(array $credentials, ?\Illuminate\Http\Request $request = null)
  * @method static \Illuminate\Http\JsonResponse issueTokenResponse(\Illuminate\Contracts\Auth\Authenticatable $user, ?\Illuminate\Http\Request $request = null, string $message = 'Authenticated successfully.')
+ * @method static \Illuminate\Http\JsonResponse refresh(?\Illuminate\Http\Request $request = null)
  * @method static \Illuminate\Http\JsonResponse logout(?\Illuminate\Http\Request $request = null)
  * @method static \Illuminate\Contracts\Auth\Authenticatable|null user(?\Illuminate\Http\Request $request = null)
  * @method static bool isMobile(?\Illuminate\Http\Request $request = null)

@@ -2,9 +2,14 @@
 
 namespace KaziOmar\OmniAuth\Tests;
 
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use KaziOmar\OmniAuth\Facades\Omni;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class DualModeAuthTest extends TestCase
 {
@@ -39,7 +44,7 @@ class DualModeAuthTest extends TestCase
         $this->assertEquals(401, $response->getStatusCode());
         $data = json_decode($response->getContent(), true);
         $this->assertFalse($data['ok']);
-        $this->assertEquals('Invalid email or password.', $data['message']);
+        $this->assertEquals('Invalid credentials.', $data['message']);
     }
 
     public function test_attempt_delivers_httponly_cookies_for_web_clients(): void
@@ -148,13 +153,92 @@ class DualModeAuthTest extends TestCase
             ]);
     }
 
+    public function test_refresh_rotates_tokens_for_mobile_and_revokes_old_refresh_token(): void
+    {
+        // 1. Issue initial mobile login
+        $mobileReq = \Illuminate\Http\Request::create('/api/login', 'POST');
+        $mobileReq->headers->set('X-Client-Type', 'mobile');
+
+        $loginRes = Omni::issueTokenResponse($this->user, $mobileReq);
+        $loginData = json_decode($loginRes->getContent(), true)['data'];
+        $oldRefreshToken = $loginData['refresh_token'];
+
+        $this->assertNotEmpty($oldRefreshToken);
+
+        // Verify token exists in database
+        $this->assertNotNull(PersonalAccessToken::findToken($oldRefreshToken));
+
+        // 2. Perform refresh using mobile header
+        $refreshReq = \Illuminate\Http\Request::create('/api/refresh', 'POST');
+        $refreshReq->headers->set('X-Client-Type', 'mobile');
+        $refreshReq->headers->set('X-Refresh-Token', $oldRefreshToken);
+
+        $refreshRes = Omni::refresh($refreshReq);
+        $this->assertEquals(200, $refreshRes->getStatusCode());
+
+        $refreshData = json_decode($refreshRes->getContent(), true)['data'];
+        $newRefreshToken = $refreshData['refresh_token'];
+        $newAccessToken = $refreshData['access_token'];
+
+        $this->assertNotEquals($oldRefreshToken, $newRefreshToken, 'Refresh token must be rotated.');
+        $this->assertNotEmpty($newAccessToken);
+
+        // Security assertion: Old refresh token MUST be permanently revoked to prevent replay attacks!
+        $this->assertNull(PersonalAccessToken::findToken($oldRefreshToken), 'Old refresh token must be revoked.');
+
+        // 3. Attempting to replay old refresh token MUST fail with 401
+        $replayReq = \Illuminate\Http\Request::create('/api/refresh', 'POST');
+        $replayReq->headers->set('X-Client-Type', 'mobile');
+        $replayReq->headers->set('X-Refresh-Token', $oldRefreshToken);
+
+        $replayRes = Omni::refresh($replayReq);
+        $this->assertEquals(401, $replayRes->getStatusCode());
+    }
+
+    public function test_rate_limiting_locks_out_after_max_failed_attempts(): void
+    {
+        $credentials = [
+            'email' => 'omar@example.com',
+            'password' => 'wrong_pass',
+        ];
+
+        // Fail 5 times (configured max_attempts)
+        for ($i = 0; $i < 5; $i++) {
+            $res = Omni::attempt($credentials);
+            $this->assertEquals(401, $res->getStatusCode());
+        }
+
+        // 6th attempt MUST trigger 429 Too Many Requests
+        $lockedRes = Omni::attempt($credentials);
+        $this->assertEquals(429, $lockedRes->getStatusCode());
+
+        $data = json_decode($lockedRes->getContent(), true);
+        $this->assertStringContainsString('Too many login attempts', $data['message']);
+        $this->assertArrayHasKey('retry_after', $data);
+    }
+
+    public function test_login_and_logout_fire_standard_laravel_auth_events(): void
+    {
+        Event::fake([Login::class, Failed::class, Logout::class]);
+
+        // 1. Failed login event
+        Omni::attempt(['email' => 'omar@example.com', 'password' => 'wrong']);
+        Event::assertDispatched(Failed::class);
+
+        // 2. Successful login event
+        Omni::attempt(['email' => 'omar@example.com', 'password' => 'secret123']);
+        Event::assertDispatched(Login::class);
+
+        // 3. Logout event
+        $this->actingAs($this->user, 'sanctum');
+        Omni::logout();
+        Event::assertDispatched(Logout::class);
+    }
+
     public function test_logout_revokes_token_and_clears_cookies_for_web(): void
     {
         $tokenObj = $this->user->createToken('test_token');
         $token = $tokenObj->plainTextToken;
-
-        // 1. Authenticate with cookie
-        $this->withUnencryptedCookie('omni_access_token', $token);
 
         // Mock current authenticated user
         $this->actingAs($this->user, 'sanctum');
