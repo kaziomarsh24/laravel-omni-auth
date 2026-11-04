@@ -5,6 +5,7 @@
 composer.lock
 SECURITY_LEARNINGS.md
 *.local.md
+FEATURE_TRACKER.md
 docs/node_modules/
 docs/dist/
 docs/.astro/
