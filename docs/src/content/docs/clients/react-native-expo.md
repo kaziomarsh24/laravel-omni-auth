@@ -16,6 +16,12 @@ npm install axios
 
 ---
 
+:::warning[Single-Use Refresh Token Concurrency Lock]
+Because OmniAuth enforces **Single-Use Refresh Token Rotation**, submitting a previously rotated refresh token triggers an immediate **Replay Attack Security Lockout**.
+
+When multiple parallel requests fail with HTTP 401 simultaneously, ensure your Axios interceptor uses a `isRefreshing` lock flag and a promise retry queue (as shown below) so that only **one refresh operation** runs at a time.
+:::
+
 ## API Client Setup
 
 Create `src/services/api.ts`:

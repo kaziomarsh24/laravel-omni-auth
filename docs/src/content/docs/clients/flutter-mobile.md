@@ -21,6 +21,16 @@ dependencies:
 
 ---
 
+:::warning[Single-Use Refresh Token Concurrency Lock]
+OmniAuth enforces **Strict Single-Use Token Rotation**. When `/api/auth/refresh` is called, the old refresh token is revoked immediately.
+
+If a mobile app launches from the background and dispatches multiple parallel API calls simultaneously (e.g., `/user`, `/notifications`, `/feed`), all requests will fail with HTTP 401 if the access token has expired. If multiple requests attempt to call `/api/auth/refresh` at the same time:
+1. The first request succeeds and burns the refresh token.
+2. The remaining parallel requests submit the now-revoked token, triggering an **Automatic Replay Attack Lockout** which invalidates the user's entire account session!
+
+**Solution:** Always use a synchronization lock / request queue in your Dio interceptor (as implemented below) so that only **one single refresh request** executes at any given time.
+:::
+
 ## ApiClient Implementation with Token Refresh Interceptor
 
 Create `lib/core/api_client.dart`:

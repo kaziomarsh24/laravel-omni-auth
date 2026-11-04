@@ -123,6 +123,14 @@ Response:
 
 ## Apple Sign-In Cryptographic Verification
 
+:::tip[Apple Web Services ID vs iOS App Bundle ID]
+Apple generates identity tokens with different audience (`aud`) values depending on the client platform:
+- **Web Browser OAuth:** The audience is your Apple **Services ID** (e.g. `com.company.web`).
+- **Native iOS / Flutter App:** The audience is your Apple **App Bundle ID** (e.g. `com.company.app`).
+
+In `config/omni-auth.php`, configure your Apple client settings accordingly, or set your iOS Bundle ID so that tokens exchanged via `/api/auth/social/exchange` pass cryptographic audience verification without triggering `400 Invalid Token Audience`.
+:::
+
 When verifying Apple identity tokens:
 1. **Header Inspection**: Decodes the JWT header and verifies that `alg` is strictly `RS256`. Tokens specifying `HS256` or `none` are immediately rejected.
 2. **JWKS Fetching**: Apple's JSON Web Key Set (`https://appleid.apple.com/auth/keys`) is retrieved. If the request fails, the cache is bypassed to avoid locking users out.

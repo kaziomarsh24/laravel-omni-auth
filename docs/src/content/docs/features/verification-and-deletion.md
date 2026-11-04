@@ -9,6 +9,19 @@ OmniAuth includes complete flows for email verification and self-service account
 
 ## Email Verification
 
+:::note[Registration Flow & Email Verification Architecture]
+Modern SaaS and mobile applications (e.g., GitHub, Twitter/X, Spotify, Netflix) face a critical tradeoff between user drop-off and account security. OmniAuth accommodates both industry architectures:
+
+1. **Frictionless Onboarding (Package Default — Recommended UX):**
+   - By default (`'auto_login' => true`), upon calling `POST /api/auth/register`, OmniAuth immediately returns authentication tokens (or sets HttpOnly cookies) and dispatches a background verification email.
+   - The user is logged in immediately (`email_verified_at = null`), allowing them to explore onboarding tours or public app areas without friction.
+   - Sensitive or billing endpoints should be protected using Laravel's standard `verified` middleware (`Route::middleware(['auth:sanctum', 'verified'])`), which blocks unverified users with HTTP 403 until they complete verification.
+
+2. **Strict Verification-First Flow (Regulated / High-Security Apps):**
+   - If your application strictly requires verification before any session is issued (e.g., banking, healthcare, government), set `'auto_login' => false` in `config/omni-auth.php` (or `OMNI_REGISTRATION_AUTO_LOGIN=false` in `.env`).
+   - In this mode, `POST /api/auth/register` creates the user record and dispatches the verification link/OTP, but returns **zero tokens** and sets **zero cookies**. The client must guide the user to verify their email before they can authenticate via `POST /api/auth/login`.
+:::
+
 OmniAuth supports two methods of email verification: signed URLs (for web email clients) and 6-digit OTP codes (for mobile apps).
 
 ### 1. Cryptographically Signed URL Verification
@@ -70,7 +83,13 @@ Response:
 
 ---
 
-## Self-Service Account Deletion (GDPR)
+## Self-Service Account Deletion (GDPR & Apple App Store)
+
+:::tip[Apple App Store Guideline 5.1.1(v) Compliance]
+Apple App Store Review Guidelines strictly mandate that any mobile application that supports account creation must also allow users to initiate deletion of their account from within the app.
+
+`DELETE /api/auth/account` fully satisfies Guideline 5.1.1(v). It revokes all active tokens, removes tracked device records, deletes associated social accounts, and permanently deletes or soft-deletes the user record in full compliance with Apple and GDPR requirements.
+:::
 
 OmniAuth enables users to permanently delete their account and associated authentication credentials via `DELETE /api/auth/account`.
 

@@ -15,6 +15,14 @@ When integrating web frontends with Laravel OmniAuth, the application should lev
 
 ---
 
+:::caution[CORS & HttpOnly Cookie Gotcha]
+To enable web browsers to securely receive and persist `SameSite` HttpOnly cookies:
+
+1. **Enable Credentials:** In your Laravel backend `config/cors.php`, you **must** set `'supports_credentials' => true`.
+2. **Explicit Allowed Origins:** When `supports_credentials` is `true`, CORS specifications strictly prohibit wildcard origins (`'*'`). You must explicitly specify your frontend origin (e.g., `'allowed_origins' => ['http://localhost:3000', 'https://app.example.com']`).
+3. **Axios `withCredentials`:** In Next.js, always set `withCredentials: true` on your HTTP client instance. Without this flag, browsers silently strip cookies from cross-origin requests.
+:::
+
 ## Axios Setup Example
 
 Create a reusable API client instance in `lib/api.ts`:

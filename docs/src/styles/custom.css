@@ -404,3 +404,189 @@ pre {
   color: #be123c !important;
   border: 1px solid rgba(225, 29, 72, 0.18) !important;
 }
+
+/* --------------------------------------------------------------------------
+   Micro-Interactions: Text Selection & Slim Scrollbar
+   -------------------------------------------------------------------------- */
+::selection {
+  background: rgba(244, 63, 94, 0.35) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='light'] ::selection {
+  background: rgba(225, 29, 72, 0.25) !important;
+  color: #0f172a !important;
+}
+
+/* Slim Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   HTTP Method Badges (Tier-1 Developer Aesthetic)
+   -------------------------------------------------------------------------- */
+.badge-method {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.badge-post {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.badge-get {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #3b82f6 !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+.badge-delete {
+  background: rgba(244, 63, 94, 0.15) !important;
+  color: #f43f5e !important;
+  border: 1px solid rgba(244, 63, 94, 0.35) !important;
+}
+
+.badge-put,
+.badge-patch {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Parameter Tables (Modern Glass & Clean Monospace)
+   -------------------------------------------------------------------------- */
+table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin: 1.5rem 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+:root[data-theme='dark'] table {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(15, 17, 27, 0.6) !important;
+}
+
+:root[data-theme='light'] table {
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+}
+
+th {
+  padding: 0.75rem 1rem !important;
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+  letter-spacing: -0.01em !important;
+}
+
+:root[data-theme='dark'] th {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-theme='light'] th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+td {
+  padding: 0.75rem 1rem !important;
+  font-size: 0.9rem !important;
+}
+
+:root[data-theme='dark'] td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme='light'] td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+/* Field name (first column) styled with crisp pill */
+table td:first-child code {
+  font-weight: 600 !important;
+  font-size: 0.88em !important;
+}
+
+:root[data-theme='dark'] table td:first-child code {
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: #fb7185 !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+}
+
+:root[data-theme='light'] table td:first-child code {
+  background: rgba(225, 29, 72, 0.07) !important;
+  color: #be123c !important;
+  border: 1px solid rgba(225, 29, 72, 0.18) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Callout / Aside Boxes (Glassmorphism & Crisp Accents)
+   -------------------------------------------------------------------------- */
+.starlight-aside,
+aside {
+  border-radius: 12px !important;
+  padding: 1.25rem 1.5rem !important;
+  margin: 1.5rem 0 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.15) !important;
+}
+
+:root[data-theme='dark'] .starlight-aside {
+  background: rgba(18, 20, 32, 0.75) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+:root[data-theme='light'] .starlight-aside {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-top: 1px solid #e2e8f0 !important;
+  border-right: 1px solid #e2e8f0 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}

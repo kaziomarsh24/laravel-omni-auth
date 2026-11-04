@@ -53,6 +53,12 @@ Response:
 #### Open Redirect Protection on `redirect_url`
 The `redirect_url` parameter is strictly validated against `config('app.url')` and whitelisted domains. Any URL containing `@`, `\`, or unauthorized hosts is rejected with HTTP 422.
 
+:::caution[Localhost Redirects Blocked in Production]
+When `APP_ENV=production`, OmniAuth automatically blocks `http://localhost` and private IP addresses in `redirect_url` to defend against phishing and open-redirect vulnerabilities.
+
+In local development (`APP_ENV=local`), localhost URLs like `http://localhost:3000/auth/callback` are permitted. When deploying to staging or production, ensure your frontend client supplies a production origin that matches your whitelist in `config/omni-auth.php`.
+:::
+
 ---
 
 ### 2. Verify Magic Link

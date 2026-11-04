@@ -93,6 +93,12 @@ class User extends Authenticatable
 
 ## 4. Run Migrations
 
+:::note[Custom User Models with UUIDs]
+If your application uses UUIDs or ULIDs as primary keys on the `User` model (`$keyType = 'string'`, `HasUuids`), OmniAuth's migration definitions automatically align with your schema.
+
+OmniAuth's foreign keys use `foreignIdFor(config('omni-auth.user_model'))` which resolves correctly whether your user table utilizes auto-incrementing big integers or UUID string identifiers.
+:::
+
 If you did not run migrations during `php artisan omni:install`, execute them manually:
 
 ```bash

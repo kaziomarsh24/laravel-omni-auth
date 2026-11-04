@@ -45,7 +45,7 @@ This document provides exhaustive, copy-paste ready technical specifications for
 
 ## 1. Core Authentication
 
-### `POST /api/auth/login`
+### <span class="badge-method badge-post">POST</span> `/api/auth/login`
 Authenticates user credentials and issues dual-mode tokens (SameSite HttpOnly cookies for web browsers or direct Bearer tokens for mobile apps).
 
 - **Route Name**: `omni.login`
@@ -151,8 +151,8 @@ Returns an encrypted challenge token valid for 5 minutes instead of access token
 
 ---
 
-### `POST /api/auth/register`
-Registers a new user record, assigns configured default roles, and automatically logs in the client.
+### <span class="badge-method badge-post">POST</span> `/api/auth/register`
+Registers a new user record, assigns configured default roles, and processes authentication according to your configured registration flow.
 
 - **Route Name**: `omni.register`
 - **Authentication**: Public (None)
@@ -160,8 +160,17 @@ Registers a new user record, assigns configured default roles, and automatically
   ```http
   Accept: application/json
   Content-Type: application/json
-  X-Client-Type: mobile (optional)
+  X-Client-Type: mobile (optional, forces Bearer tokens in JSON body)
   ```
+
+:::note[Registration Flow & Email Verification Architecture]
+OmniAuth supports two distinct industry patterns for registration:
+
+1. **Frictionless Onboarding (`auto_login => true`, Default):**
+   The user account is created with `email_verified_at = null`, a background email verification notification is dispatched, and the user is authenticated immediately (via HttpOnly cookies for Web SPAs or Bearer tokens for mobile). This eliminates onboarding drop-off while allowing developers to restrict sensitive actions with Laravel's `verified` route middleware.
+2. **Strict Verification-First (`auto_login => false`):**
+   Configured via `config/omni-auth.php` (`'auto_login' => false`) or `OMNI_REGISTRATION_AUTO_LOGIN=false`. OmniAuth creates the user record and dispatches verification, but returns **zero tokens** and sets **zero cookies**. The client must verify their email before they can log in via `/api/auth/login`.
+:::
 
 #### Request Parameters
 | Field | Type | Required | Description | Example |
@@ -171,7 +180,25 @@ Registers a new user record, assigns configured default roles, and automatically
 | `password` | `string` | Yes | Password matching strength rules | `"Secret123!"` |
 | `password_confirmation` | `string` | Yes | Password confirmation | `"Secret123!"` |
 
-#### Success Response: 201 Created
+#### Success Response: 201 Created (Web SPA Mode — Default)
+Sets `omni_access_token` and `omni_refresh_token` in HttpOnly SameSite cookies. The response payload omits token strings to defend against XSS token harvesting.
+```json
+{
+  "ok": true,
+  "message": "User registered and authenticated successfully.",
+  "data": {
+    "user": {
+      "id": 2,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "roles": ["customer"]
+    }
+  }
+}
+```
+
+#### Success Response: 201 Created (Mobile Client Mode — `X-Client-Type: mobile`)
+Delivers tokens in JSON body for storage in iOS Keychain / Android EncryptedSharedPreferences.
 ```json
 {
   "ok": true,
@@ -181,6 +208,29 @@ Registers a new user record, assigns configured default roles, and automatically
     "refresh_token": "4|eFgH5678...",
     "token_type": "Bearer",
     "expires_in": 900,
+    "tokens": {
+      "access_token": "3|aBcD1234...",
+      "refresh_token": "4|eFgH5678...",
+      "token_type": "Bearer",
+      "expires_in": 900
+    },
+    "user": {
+      "id": 2,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "roles": ["customer"]
+    }
+  }
+}
+```
+
+#### Success Response: 201 Created (Strict Verification-First Mode — `auto_login: false`)
+When `auto_login` is disabled in `config/omni-auth.php`, no sessions or tokens are returned until the user verifies their email.
+```json
+{
+  "ok": true,
+  "message": "User registered successfully. Please verify your email to continue.",
+  "data": {
     "user": {
       "id": 2,
       "name": "Jane Doe",
@@ -204,7 +254,7 @@ Registers a new user record, assigns configured default roles, and automatically
 
 ---
 
-### `POST /api/auth/refresh`
+### <span class="badge-method badge-post">POST</span> `/api/auth/refresh`
 Rotates single-use refresh token and issues a fresh access token. Enforces automatic replay attack lockout.
 
 - **Route Name**: `omni.refresh`
@@ -258,7 +308,7 @@ Rotates single-use refresh token and issues a fresh access token. Enforces autom
 
 ---
 
-### `POST /api/auth/logout`
+### <span class="badge-method badge-post">POST</span> `/api/auth/logout`
 Revokes the current access token and clears all HttpOnly authentication cookies.
 
 - **Route Name**: `omni.logout`
@@ -292,7 +342,7 @@ Revokes the current access token and clears all HttpOnly authentication cookies.
 
 ---
 
-### `GET /api/auth/me`
+### <span class="badge-method badge-get">GET</span> `/api/auth/me`
 Returns the user profile with active Spatie roles and permissions.
 
 - **Route Name**: `omni.me`
@@ -325,7 +375,7 @@ Returns the user profile with active Spatie roles and permissions.
 
 ## 2. Multi-Device Management
 
-### `GET /api/auth/devices`
+### <span class="badge-method badge-get">GET</span> `/api/auth/devices`
 Returns all active logged-in devices and sessions for the authenticated user.
 
 - **Route Name**: `omni.devices.index`
@@ -364,7 +414,7 @@ Returns all active logged-in devices and sessions for the authenticated user.
 
 ---
 
-### `DELETE /api/auth/devices/{id}`
+### <span class="badge-method badge-delete">DELETE</span> `/api/auth/devices/{id}`
 Revokes a specific remote device session and destroys its refresh token.
 
 - **Route Name**: `omni.devices.destroy`
@@ -390,7 +440,7 @@ Revokes a specific remote device session and destroys its refresh token.
 
 ---
 
-### `POST /api/auth/devices/logout-others`
+### <span class="badge-method badge-post">POST</span> `/api/auth/devices/logout-others`
 Terminates all other logged-in device sessions except the current request.
 
 - **Route Name**: `omni.devices.logout_others`
@@ -409,7 +459,7 @@ Terminates all other logged-in device sessions except the current request.
 
 ---
 
-### `POST /api/auth/devices/fcm`
+### <span class="badge-method badge-post">POST</span> `/api/auth/devices/fcm`
 Synchronizes push notification tokens (FCM, APNS, Expo) for the current device session.
 
 - **Route Name**: `omni.devices.fcm`
@@ -453,7 +503,7 @@ When passed as an HTTP header during `/api/auth/login`, `/api/auth/register`, or
 
 ## 3. Two-Factor Authentication
 
-### `POST /api/auth/2fa/challenge`
+### <span class="badge-method badge-post">POST</span> `/api/auth/2fa/challenge`
 Resolves a temporary pre-authentication challenge token using a TOTP 6-digit code or recovery code.
 
 - **Route Name**: `omni.2fa.challenge`
@@ -494,7 +544,7 @@ Resolves a temporary pre-authentication challenge token using a TOTP 6-digit cod
 
 ---
 
-### `POST /api/auth/2fa/fallback-otp`
+### <span class="badge-method badge-post">POST</span> `/api/auth/2fa/fallback-otp`
 Requests an emergency one-time fallback code via notification when authenticator is inaccessible.
 
 - **Route Name**: `omni.2fa.fallback_otp`
@@ -515,7 +565,7 @@ Requests an emergency one-time fallback code via notification when authenticator
 
 ---
 
-### `POST /api/auth/2fa/setup`
+### <span class="badge-method badge-post">POST</span> `/api/auth/2fa/setup`
 Initiates TOTP setup, generating a secret key, QR code SVG, and 8 recovery codes.
 
 - **Route Name**: `omni.2fa.setup`
@@ -551,7 +601,7 @@ Initiates TOTP setup, generating a secret key, QR code SVG, and 8 recovery codes
 
 ---
 
-### `POST /api/auth/2fa/confirm`
+### <span class="badge-method badge-post">POST</span> `/api/auth/2fa/confirm`
 Confirms setup by verifying the first 6-digit code from the authenticator app.
 
 - **Route Name**: `omni.2fa.confirm`
@@ -572,7 +622,7 @@ Confirms setup by verifying the first 6-digit code from the authenticator app.
 
 ---
 
-### `POST /api/auth/2fa/recovery-codes`
+### <span class="badge-method badge-post">POST</span> `/api/auth/2fa/recovery-codes`
 Invalidates existing recovery codes and generates eight fresh single-use recovery codes.
 
 - **Route Name**: `omni.2fa.recovery_codes`
@@ -605,7 +655,7 @@ Invalidates existing recovery codes and generates eight fresh single-use recover
 
 ---
 
-### `POST /api/auth/2fa/disable`
+### <span class="badge-method badge-post">POST</span> `/api/auth/2fa/disable`
 Disables Two-Factor Authentication and purges stored TOTP secrets and recovery codes.
 
 - **Route Name**: `omni.2fa.disable`
@@ -628,7 +678,7 @@ Disables Two-Factor Authentication and purges stored TOTP secrets and recovery c
 
 ## 4. Social Authentication & Token Exchange
 
-### `POST /api/auth/social/exchange`
+### <span class="badge-method badge-post">POST</span> `/api/auth/social/exchange`
 Exchanges a native mobile ID Token (Google ID Token or Apple Identity JWT) for authentication tokens.
 
 - **Route Name**: `omni.social.exchange`
@@ -662,7 +712,7 @@ Exchanges a native mobile ID Token (Google ID Token or Apple Identity JWT) for a
 
 ---
 
-### `GET /api/auth/social/{provider}/redirect`
+### <span class="badge-method badge-get">GET</span> `/api/auth/social/{provider}/redirect`
 Generates an encrypted OAuth2 authorization URL with state CSRF token.
 
 - **Route Name**: `omni.social.redirect`
@@ -680,7 +730,7 @@ Generates an encrypted OAuth2 authorization URL with state CSRF token.
 
 ---
 
-### `GET|POST /api/auth/social/{provider}/callback`
+### <span class="badge-method badge-get">GET</span><span class="badge-method badge-post">POST</span> `/api/auth/social/{provider}/callback`
 Handles the OAuth2 provider callback, verifies state, and logs the user in.
 
 - **Route Name**: `omni.social.callback`
@@ -694,7 +744,7 @@ Handles the OAuth2 provider callback, verifies state, and logs the user in.
 
 ---
 
-### `GET /api/auth/social/accounts`
+### <span class="badge-method badge-get">GET</span> `/api/auth/social/accounts`
 Lists all social identities linked to the authenticated user.
 
 - **Route Name**: `omni.social.accounts`
@@ -719,7 +769,7 @@ Lists all social identities linked to the authenticated user.
 
 ---
 
-### `DELETE /api/auth/social/{provider}`
+### <span class="badge-method badge-delete">DELETE</span> `/api/auth/social/{provider}`
 Unlinks a specific third-party provider identity from the account.
 
 - **Route Name**: `omni.social.unlink`
@@ -737,7 +787,7 @@ Unlinks a specific third-party provider identity from the account.
 
 ## 5. Password Reset
 
-### `POST /api/auth/forgot-password`
+### <span class="badge-method badge-post">POST</span> `/api/auth/forgot-password`
 Generates a cryptographic 6-digit numeric OTP and dispatches a password reset notification.
 
 - **Route Name**: `omni.password.forgot`
@@ -759,7 +809,7 @@ Generates a cryptographic 6-digit numeric OTP and dispatches a password reset no
 
 ---
 
-### `POST /api/auth/verify-reset-otp`
+### <span class="badge-method badge-post">POST</span> `/api/auth/verify-reset-otp`
 Validates the 6-digit OTP and exchanges it for a temporary password reset token.
 
 - **Route Name**: `omni.password.verify_otp`
@@ -792,7 +842,7 @@ Validates the 6-digit OTP and exchanges it for a temporary password reset token.
 
 ---
 
-### `POST /api/auth/reset-password`
+### <span class="badge-method badge-post">POST</span> `/api/auth/reset-password`
 Updates the password using the reset token and revokes all active sessions.
 
 - **Route Name**: `omni.password.reset`
@@ -817,7 +867,7 @@ Updates the password using the reset token and revokes all active sessions.
 
 ## 6. Passwordless Magic Links
 
-### `POST /api/auth/magic-link`
+### <span class="badge-method badge-post">POST</span> `/api/auth/magic-link`
 Generates a cryptographically signed magic login link and sends it via email.
 
 - **Route Name**: `omni.magic.send`
@@ -839,7 +889,7 @@ Generates a cryptographically signed magic login link and sends it via email.
 
 ---
 
-### `GET|POST /api/auth/magic-link/verify`
+### <span class="badge-method badge-get">GET</span><span class="badge-method badge-post">POST</span> `/api/auth/magic-link/verify`
 Verifies magic link token and authenticates the session.
 
 - **Route Name**: `omni.magic.verify`
@@ -872,7 +922,7 @@ Verifies magic link token and authenticates the session.
 
 ## 7. Email Verification & Lifecycle
 
-### `GET|POST /api/auth/email/verify/{id}/{hash}`
+### <span class="badge-method badge-get">GET</span><span class="badge-method badge-post">POST</span> `/api/auth/email/verify/{id}/{hash}`
 Signed browser route clicked directly from verification emails.
 
 - **Route Name**: `omni.email.verify`
@@ -888,7 +938,7 @@ Signed browser route clicked directly from verification emails.
 
 ---
 
-### `POST /api/auth/email/verify`
+### <span class="badge-method badge-post">POST</span> `/api/auth/email/verify`
 Verifies email address using mobile 6-digit numeric OTP.
 
 - **Route Name**: `omni.email.verify_otp`
@@ -909,7 +959,7 @@ Verifies email address using mobile 6-digit numeric OTP.
 
 ---
 
-### `POST /api/auth/email/resend`
+### <span class="badge-method badge-post">POST</span> `/api/auth/email/resend`
 Dispatches a new email verification code/link to the authenticated user.
 
 - **Route Name**: `omni.email.resend`
@@ -925,7 +975,7 @@ Dispatches a new email verification code/link to the authenticated user.
 
 ---
 
-### `DELETE /api/auth/account`
+### <span class="badge-method badge-delete">DELETE</span> `/api/auth/account`
 Permanently deletes the authenticated user account and executes cascading cleanup of devices, tokens, and 2FA credentials.
 
 - **Route Name**: `omni.account.delete`

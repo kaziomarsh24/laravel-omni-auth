@@ -13,6 +13,12 @@ OmniAuth includes full-featured Two-Factor Authentication (2FA) compatible with 
 - **Hashed Recovery Codes**: Backup recovery codes are hashed using SHA-256 before being stored in the database. Plaintext recovery codes are only displayed once to the user during setup.
 - **Challenge Isolation**: During initial login, if 2FA is active, access tokens are withheld. The client receives a restricted `2fa-challenge` token valid only for calling the verify endpoint.
 
+:::warning[Server NTP Clock Synchronization]
+TOTP verification strictly implements **RFC 6238** (30-second time-based windows). Although OmniAuth permits a standard 1-step clock drift allowance (±30 seconds), if your Docker container, local VM, or cloud server's system clock deviates from atomic time by more than 60 seconds, valid Google Authenticator codes will be rejected.
+
+Ensure your host or server environment has active **NTP (Network Time Protocol)** synchronization (`systemd-timesyncd`, `chrony`, or `ntp`).
+:::
+
 ---
 
 ## Activation Flow
