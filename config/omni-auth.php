@@ -164,6 +164,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Social Authentication Settings (OAuth2 & Mobile Native Token Exchange)
+    |--------------------------------------------------------------------------
+    | Supports web redirect flow (via Socialite if installed or native OAuth)
+    | and mobile native token exchange (Google ID token, Apple JWT exchange).
+    */
+    'social' => [
+        'auto_link_by_email' => env('OMNI_SOCIAL_AUTO_LINK', true),
+        'providers' => [
+            'google' => [
+                'client_id' => env('GOOGLE_CLIENT_ID'),
+                'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+                'redirect' => env('GOOGLE_REDIRECT_URI', '/api/auth/social/google/callback'),
+                'mobile_client_ids' => array_filter(explode(',', env('GOOGLE_MOBILE_CLIENT_IDS', ''))),
+            ],
+            'apple' => [
+                'client_id' => env('APPLE_CLIENT_ID'), // Services ID (Web) or App Bundle ID (iOS)
+                'team_id' => env('APPLE_TEAM_ID'),
+                'key_id' => env('APPLE_KEY_ID'),
+                'private_key' => env('APPLE_PRIVATE_KEY'),
+                'redirect' => env('APPLE_REDIRECT_URI', '/api/auth/social/apple/callback'),
+            ],
+            'github' => [
+                'client_id' => env('GITHUB_CLIENT_ID'),
+                'client_secret' => env('GITHUB_CLIENT_SECRET'),
+                'redirect' => env('GITHUB_REDIRECT_URI', '/api/auth/social/github/callback'),
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Ready-to-Use Routes
     |--------------------------------------------------------------------------
     | Opt-in built-in authentication routes. When enabled, standard endpoints

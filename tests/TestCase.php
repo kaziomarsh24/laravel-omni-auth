@@ -38,6 +38,17 @@ abstract class TestCase extends Orchestra
         ]);
 
         $app['config']->set('omni-auth.user_model', TestUser::class);
+        $app['config']->set('omni-auth.features', [
+            \KaziOmar\OmniAuth\Features::emailAuthentication(),
+            \KaziOmar\OmniAuth\Features::dualModeTokens(),
+            \KaziOmar\OmniAuth\Features::tokenRotation(),
+            \KaziOmar\OmniAuth\Features::registration(),
+            \KaziOmar\OmniAuth\Features::passwordReset(),
+            \KaziOmar\OmniAuth\Features::deviceTracking(),
+            \KaziOmar\OmniAuth\Features::fcmTokenManagement(),
+            \KaziOmar\OmniAuth\Features::twoFactorAuth(),
+            \KaziOmar\OmniAuth\Features::socialLogin(),
+        ]);
     }
 
     protected function setUpDatabase(): void
@@ -51,6 +62,7 @@ abstract class TestCase extends Orchestra
             $table->string('phone')->nullable();
             $table->string('role')->nullable();
             $table->string('company')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
             $table->boolean('is_admin')->default(false);
             $table->rememberToken();
             $table->timestamps();
@@ -67,6 +79,10 @@ abstract class TestCase extends Orchestra
         // 4. Run auth_two_factor migration
         $twoFactorMigration = require __DIR__ . '/../database/migrations/2026_01_01_000002_create_auth_two_factor_table.php';
         $twoFactorMigration->up();
+
+        // 5. Run auth_social_accounts migration
+        $socialMigration = require __DIR__ . '/../database/migrations/2026_01_01_000003_create_auth_social_accounts_table.php';
+        $socialMigration->up();
     }
 }
 

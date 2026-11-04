@@ -22,17 +22,28 @@ use KaziOmar\OmniAuth\Http\Resources\OmniUserResource;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
 use KaziOmar\OmniAuth\Services\DeviceManager;
+use KaziOmar\OmniAuth\Services\SocialAuthManager;
 use KaziOmar\OmniAuth\Services\TwoFactorManager;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class OmniAuthManager
 {
+    protected ?SocialAuthManager $socialManager = null;
+
     public function __construct(
         protected ClientDetector $clientDetector,
         protected CookieManager $cookieManager,
         protected DeviceManager $deviceManager,
         protected TwoFactorManager $twoFactorManager
     ) {}
+
+    /**
+     * Access the social authentication manager.
+     */
+    public function social(): SocialAuthManager
+    {
+        return $this->socialManager ??= new SocialAuthManager($this);
+    }
 
     /**
      * Access the two-factor authentication service.
@@ -306,6 +317,14 @@ class OmniAuthManager
                 'user' => $this->formatUserResponse($user),
             ],
         ], 201);
+    }
+
+    /**
+     * Alias for issueTokenResponse, returning dual-mode tokens according to client type.
+     */
+    public function respondWithDualModeTokens(Authenticatable|Model $user, ?Request $request = null, string $message = 'Authenticated successfully.', int $status = 200): JsonResponse
+    {
+        return $this->issueTokenResponse($user, $request, $message, $status);
     }
 
     /**

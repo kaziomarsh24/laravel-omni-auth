@@ -131,6 +131,18 @@ class OmniAuthServiceProvider extends ServiceProvider
                         Route::post('/disable', [Http\Controllers\TwoFactorController::class, 'disable'])->name('omni.2fa.disable');
                     });
                 });
+
+                // Social Authentication & Mobile Native Token Exchange routes
+                Route::prefix('social')->group(function () {
+                    Route::post('/exchange', [Http\Controllers\SocialAuthController::class, 'exchange'])->name('omni.social.exchange');
+                    Route::get('/{provider}/redirect', [Http\Controllers\SocialAuthController::class, 'redirect'])->name('omni.social.redirect');
+                    Route::match(['get', 'post'], '/{provider}/callback', [Http\Controllers\SocialAuthController::class, 'callback'])->name('omni.social.callback');
+
+                    Route::middleware('omni.auth')->group(function () {
+                        Route::get('/accounts', [Http\Controllers\SocialAuthController::class, 'accounts'])->name('omni.social.accounts');
+                        Route::delete('/{provider}', [Http\Controllers\SocialAuthController::class, 'unlink'])->name('omni.social.unlink');
+                    });
+                });
             });
     }
 }

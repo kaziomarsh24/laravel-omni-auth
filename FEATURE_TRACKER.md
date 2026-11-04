@@ -67,11 +67,11 @@ Status format:
 ---
 
 ## Module 6: Social Authentication & Mobile Native Token Exchange
-41. [ ] Opt-in database migration for linked social providers (`auth_social_accounts`).
-42. [ ] Web OAuth2 redirect and callback flow handling for Google, Apple, and GitHub.
-43. [ ] Mobile native token exchange endpoint (`/api/auth/social/exchange` for Google/Apple ID tokens).
-44. [ ] Sign In with Apple client secret generation and private relay email decryption.
-45. [ ] Intelligent account linking merging verified social logins into existing user accounts.
+41. [x] Opt-in database migration for linked social providers (`auth_social_accounts`).
+42. [x] Web OAuth2 redirect and callback flow handling for Google, Apple, and GitHub.
+43. [x] Mobile native token exchange endpoint (`/api/auth/social/exchange` for Google/Apple ID tokens).
+44. [x] Sign In with Apple client secret generation and private relay email decryption.
+45. [x] Intelligent account linking merging verified social logins into existing user accounts.
 
 ---
 

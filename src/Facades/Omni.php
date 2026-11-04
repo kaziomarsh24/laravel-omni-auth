@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \KaziOmar\OmniAuth\Services\ClientDetector client()
  * @method static \KaziOmar\OmniAuth\Services\DeviceManager devices()
  * @method static \KaziOmar\OmniAuth\Services\TwoFactorManager twoFactor()
+ * @method static \KaziOmar\OmniAuth\Services\SocialAuthManager social()
  *
  * @see \KaziOmar\OmniAuth\OmniAuthManager
  */
