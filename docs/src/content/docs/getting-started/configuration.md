@@ -37,6 +37,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_INCLUDE_PERMISSIONS_IN_RESPONSE` | `permissions.include_in_response` | `true` | Automatically includes `roles` & `permissions` arrays in user payloads. | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_REGISTRATION_AUTO_LOGIN` | `registration.auto_login` | `true` | Immediately logs in newly registered users (`false` requires email verify). | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_REGISTRATION_DEFAULT_ROLE` | `registration.default_role` | `null` | Spatie role name automatically assigned to new users upon registration. | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
+| `OMNI_DEFAULT_ROLE` | `default_role` | `null` | Global default Spatie role assigned upon user creation across all adapters. | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_2FA_ISSUER` | `two_factor.issuer` | `null` | App name displayed in Authenticator apps (defaults to `config('app.name')`). | [Two-Factor Authentication](/laravel-omni-auth/features/two-factor-auth/) |
 | `OMNI_2FA_CHALLENGE_TTL` | `two_factor.challenge_ttl` | `5` | Lifespan in minutes of intermediate `2fa_token` before challenge expires. | [Two-Factor Authentication](/laravel-omni-auth/features/two-factor-auth/) |
 | `OMNI_SOCIAL_AUTO_LINK` | `social.auto_link_by_email` | `true` | Safely links social logins with pre-hijack password invalidation. | [Social Login](/laravel-omni-auth/features/social-login/) |
@@ -48,6 +49,10 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `APPLE_TEAM_ID` | `social.providers.apple.team_id` | `null` | 10-character Apple Developer Team ID. | [Social Login](/laravel-omni-auth/features/social-login/) |
 | `APPLE_KEY_ID` | `social.providers.apple.key_id` | `null` | 10-character Private Key ID from Apple Developer portal. | [Social Login](/laravel-omni-auth/features/social-login/) |
 | `APPLE_PRIVATE_KEY` | `social.providers.apple.private_key` | `null` | Path or raw PEM content of Apple `.p8` private key file. | [Social Login](/laravel-omni-auth/features/social-login/) |
+| `APPLE_REDIRECT_URI` | `social.providers.apple.redirect` | `'/api/auth/social/apple/callback'` | Server callback route for Apple web OAuth flow. | [Social Login](/laravel-omni-auth/features/social-login/) |
+| `GITHUB_CLIENT_ID` | `social.providers.github.client_id` | `null` | GitHub OAuth App Client ID. | [Social Login](/laravel-omni-auth/features/social-login/) |
+| `GITHUB_CLIENT_SECRET` | `social.providers.github.client_secret` | `null` | GitHub OAuth App Client Secret. | [Social Login](/laravel-omni-auth/features/social-login/) |
+| `GITHUB_REDIRECT_URI` | `social.providers.github.redirect` | `'/api/auth/social/github/callback'` | Server callback route for GitHub OAuth web redirect flow. | [Social Login](/laravel-omni-auth/features/social-login/) |
 | `OMNI_RESET_OTP_TTL` | `password_reset.otp_ttl` | `15` | Lifespan in minutes of 6-digit password reset OTP codes. | [API Reference](/laravel-omni-auth/reference/api-reference/) |
 | `OMNI_RESET_TOKEN_TTL` | `password_reset.token_ttl` | `15` | Lifespan in minutes of verified reset tokens before submission. | [API Reference](/laravel-omni-auth/reference/api-reference/) |
 | `OMNI_RESET_MAX_ATTEMPTS` | `password_reset.max_attempts` | `5` | Maximum incorrect OTP submissions before code invalidation. | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
