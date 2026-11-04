@@ -32,29 +32,31 @@ Authorization: Bearer <access_token>
 Response:
 ```json
 {
-  "status": "success",
-  "data": [
-    {
-      "id": 1,
-      "device_id": "iphone-uuid-1234",
-      "device_name": "iPhone 15 Pro",
-      "platform": "ios",
-      "browser": "OmniApp/1.0.0",
-      "ip_address": "192.168.1.50",
-      "is_current": true,
-      "last_active_at": "2026-11-04T12:00:00Z"
-    },
-    {
-      "id": 2,
-      "device_id": "chrome-mac-uuid",
-      "device_name": "Chrome on macOS",
-      "platform": "web",
-      "browser": "Chrome 128.0",
-      "ip_address": "203.0.113.10",
-      "is_current": false,
-      "last_active_at": "2026-11-03T18:30:00Z"
-    }
-  ]
+  "ok": true,
+  "data": {
+    "devices": [
+      {
+        "id": 1,
+        "device_id": "iphone-uuid-1234",
+        "device_name": "iPhone 15 Pro",
+        "platform": "ios",
+        "browser": "OmniApp/1.0.0",
+        "ip_address": "192.168.1.50",
+        "is_current": true,
+        "last_active_at": "2026-11-04T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "device_id": "chrome-mac-uuid",
+        "device_name": "Chrome on macOS",
+        "platform": "web",
+        "browser": "Chrome 128.0",
+        "ip_address": "203.0.113.10",
+        "is_current": false,
+        "last_active_at": "2026-11-03T18:30:00Z"
+      }
+    ]
+  }
 }
 ```
 
@@ -74,8 +76,8 @@ Authorization: Bearer <access_token>
 Response:
 ```json
 {
-  "status": "success",
-  "message": "Device session revoked successfully."
+  "ok": true,
+  "message": "Device session successfully revoked."
 }
 ```
 
@@ -98,8 +100,11 @@ Authorization: Bearer <access_token>
 Response:
 ```json
 {
-  "status": "success",
-  "message": "All other device sessions have been revoked."
+  "ok": true,
+  "message": "Successfully terminated 2 other device sessions.",
+  "data": {
+    "revoked_count": 2
+  }
 }
 ```
 
@@ -107,7 +112,7 @@ Response:
 
 ### 4. Update Push Notification Token (FCM / APNS)
 
-Mobile clients can synchronize their device push tokens without re-authenticating:
+Mobile clients can synchronize their device push tokens without re-authenticating (accepts `push_token`, `fcm_token`, or headers `X-Push-Token` / `X-FCM-Token`):
 
 ```http
 POST /api/auth/devices/fcm
@@ -122,7 +127,17 @@ Content-Type: application/json
 Response:
 ```json
 {
-  "status": "success",
+  "ok": true,
+  "message": "FCM token updated successfully.",
+  "data": {
+    "device": {
+      "id": 1,
+      "device_id": "iphone-uuid-1234",
+      "fcm_token": "fcm_token_sample_abc123..."
+    }
+  }
+}
+```
   "message": "Push notification token updated successfully."
 }
 ```

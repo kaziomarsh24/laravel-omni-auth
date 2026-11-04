@@ -45,8 +45,8 @@ Content-Type: application/json
 Response:
 ```json
 {
-  "status": "success",
-  "message": "A secure magic login link has been sent to your email."
+  "ok": true,
+  "message": "If an account exists with this email, a login link has been dispatched."
 }
 ```
 
@@ -79,7 +79,8 @@ X-Client-Type: mobile
 Response (Standard Account):
 ```json
 {
-  "status": "success",
+  "ok": true,
+  "message": "Logged in successfully via magic link.",
   "data": {
     "user": {
       "id": 1,

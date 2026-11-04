@@ -444,10 +444,21 @@ class OmniAuthManager
 
         // 3. Mobile Client Delivery: Return tokens directly in JSON body
         if ($isMobile) {
+            $tokens = [
+                'access_token' => $accessToken,
+                'token_type' => 'Bearer',
+                'expires_in' => $accessTtl * 60,
+            ];
+
+            if ($refreshToken) {
+                $tokens['refresh_token'] = $refreshToken;
+            }
+
             $responseData = [
                 'access_token' => $accessToken,
                 'token_type' => 'Bearer',
                 'expires_in' => $accessTtl * 60,
+                'tokens' => $tokens,
                 'user' => $this->formatUserResponse($user),
             ];
 

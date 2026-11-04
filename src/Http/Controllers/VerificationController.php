@@ -40,6 +40,11 @@ class VerificationController extends Controller
      */
     public function verifyEmail(Request $request): JsonResponse
     {
+        // Support both otp and code parameter names
+        if (!$request->has('otp') && $request->has('code')) {
+            $request->merge(['otp' => $request->input('code')]);
+        }
+
         $validated = $request->validate([
             'otp' => ['nullable', 'string'],
             'hash' => ['nullable', 'string'],

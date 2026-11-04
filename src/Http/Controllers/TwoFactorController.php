@@ -36,6 +36,11 @@ class TwoFactorController extends Controller
             return $error;
         }
 
+        // Support both two_factor_token and challenge_token for DX flexibility
+        if (!$request->has('two_factor_token') && $request->has('challenge_token')) {
+            $request->merge(['two_factor_token' => $request->input('challenge_token')]);
+        }
+
         $request->validate([
             'two_factor_token' => 'required|string',
             'code' => 'required|string',
@@ -284,6 +289,10 @@ class TwoFactorController extends Controller
     {
         if ($error = $this->ensureFeatureEnabled()) {
             return $error;
+        }
+
+        if (!$request->has('two_factor_token') && $request->has('challenge_token')) {
+            $request->merge(['two_factor_token' => $request->input('challenge_token')]);
         }
 
         $request->validate([

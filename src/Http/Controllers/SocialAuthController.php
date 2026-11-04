@@ -88,6 +88,11 @@ class SocialAuthController extends Controller
             return $error;
         }
 
+        // Support both id_token and token parameter names
+        if (!$request->has('id_token') && $request->has('token')) {
+            $request->merge(['id_token' => $request->input('token')]);
+        }
+
         $validated = $request->validate([
             'provider' => ['required', 'string', 'in:google,apple'],
             'id_token' => ['required', 'string'],

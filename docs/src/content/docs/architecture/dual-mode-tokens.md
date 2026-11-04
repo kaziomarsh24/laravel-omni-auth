@@ -63,7 +63,8 @@ When a mobile app makes a request:
 
 ```json
 {
-  "status": "success",
+  "ok": true,
+  "message": "Authenticated successfully.",
   "data": {
     "user": {
       "id": 42,

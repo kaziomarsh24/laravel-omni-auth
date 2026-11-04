@@ -35,21 +35,21 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "code": "849201"
+  "otp": "849201"
 }
 ```
 
 Response:
 ```json
 {
-  "status": "success",
-  "message": "Email address verified successfully."
+  "ok": true,
+  "message": "Email address has been verified successfully."
 }
 ```
 
 #### Brute-Force Rate Limiting & Anti-Enumeration Defense
 - The OTP endpoint enforces a strict rate limit of 5 attempts per window.
-- If an invalid code is supplied or the code does not exist, OmniAuth returns a uniform HTTP 422 response (`{"message": "The verification code is invalid or has expired."}`) to prevent user identification or OTP brute-forcing.
+- If an invalid code is supplied or the code does not exist, OmniAuth returns a uniform HTTP 422 response (`{"ok": false, "message": "Invalid, expired, or tampered verification link or code."}`) to prevent user identification or OTP brute-forcing.
 
 ---
 
@@ -63,8 +63,8 @@ Authorization: Bearer <access_token>
 Response:
 ```json
 {
-  "status": "success",
-  "message": "Verification link sent to your email address."
+  "ok": true,
+  "message": "Email verification code has been dispatched."
 }
 ```
 
@@ -84,6 +84,14 @@ Content-Type: application/json
 
 {
   "password": "UserCurrentPassword123!"
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "message": "Your account has been deleted permanently along with all active sessions."
 }
 ```
 

@@ -45,7 +45,8 @@ Content-Type: application/json
 Response:
 ```json
 {
-  "status": "success",
+  "ok": true,
+  "message": "Two-factor setup initiated. Confirm with a valid code from your authenticator app to enable.",
   "data": {
     "secret": "JBSWY3DPEHPK3PXP",
     "qr_code_url": "otpauth://totp/MyApp:jane@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MyApp",
@@ -72,6 +73,14 @@ Content-Type: application/json
 }
 ```
 
+Response:
+```json
+{
+  "ok": true,
+  "message": "Two-factor authentication has been confirmed and enabled."
+}
+```
+
 ---
 
 ## Login Authentication Challenge
@@ -80,23 +89,24 @@ When a user with 2FA enabled logs in via credentials, social exchange, or magic 
 
 ```json
 {
-  "status": "requires_2fa",
-  "message": "Two-factor authentication code required.",
+  "ok": true,
+  "message": "Two-factor authentication is required.",
   "data": {
-    "challenge_token": "2fa_challenge_9a8b7c6d...",
+    "requires_2fa": true,
+    "two_factor_token": "2fa_challenge_9a8b7c6d...",
     "expires_in": 300
   }
 }
 ```
 
-The client then prompts the user for their 6-digit code and calls the challenge resolution endpoint:
+The client then prompts the user for their 6-digit code and calls the challenge resolution endpoint (accepts `two_factor_token` or `challenge_token`):
 
 ```http
 POST /api/auth/2fa/challenge
 Content-Type: application/json
 
 {
-  "challenge_token": "2fa_challenge_9a8b7c6d...",
+  "two_factor_token": "2fa_challenge_9a8b7c6d...",
   "code": "482910"
 }
 ```

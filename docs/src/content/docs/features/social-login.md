@@ -18,7 +18,7 @@ Supported providers: `google`, `apple`, `github`, `facebook`.
 ```text
 Browser                          Laravel Backend                    Provider (Google/Apple)
    |                                    |                                      |
-   |-- GET /api/auth/social/google ---->| Generates OAuth state                |
+   |-- GET /api/auth/social/google/redirect ->| Generates OAuth state                |
    |   (redirect endpoint)              |-- Redirects with state & client_id ->|
    |                                    |                                      |
    |<-- Redirect to Provider Consent ------------------------------------------|
@@ -59,7 +59,7 @@ Content-Type: application/json
 Response:
 ```json
 {
-  "status": "success",
+  "ok": true,
   "data": {
     "user": {
       "id": 15,
@@ -73,6 +73,49 @@ Response:
       "expires_in": 900
     }
   }
+}
+```
+
+---
+
+## Connected Account Management
+
+Authenticated users can inspect and manage their linked social providers:
+
+### 1. List Connected Accounts
+```http
+GET /api/auth/social/accounts
+Authorization: Bearer <access_token>
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "data": {
+    "accounts": [
+      {
+        "id": 1,
+        "provider": "google",
+        "provider_id": "google-sub-12345",
+        "created_at": "2026-11-04T12:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+### 2. Unlink a Social Account
+```http
+DELETE /api/auth/social/google
+Authorization: Bearer <access_token>
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "message": "Successfully unlinked google account."
 }
 ```
 

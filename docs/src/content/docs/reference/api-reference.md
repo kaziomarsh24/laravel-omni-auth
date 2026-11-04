@@ -169,12 +169,12 @@ Updates the push notification token (FCM/APNS) for the current device.
 ## 3. Two-Factor Authentication
 
 ### `POST /api/auth/2fa/challenge`
-Verifies a 6-digit TOTP code or recovery code during login.
+Verifies a 6-digit TOTP code or recovery code during login (accepts `two_factor_token` or `challenge_token`).
 
 - **Request Body**:
 ```json
 {
-  "challenge_token": "2fa_challenge_abc...",
+  "two_factor_token": "2fa_challenge_abc...",
   "code": "123456"
 }
 ```
@@ -185,12 +185,12 @@ Verifies a 6-digit TOTP code or recovery code during login.
 ---
 
 ### `POST /api/auth/2fa/fallback-otp`
-Requests an emergency SMS or email OTP fallback when authenticator is unavailable.
+Requests an emergency SMS or email OTP fallback when authenticator is unavailable (accepts `two_factor_token` or `challenge_token`).
 
 - **Request Body**:
 ```json
 {
-  "challenge_token": "2fa_challenge_abc..."
+  "two_factor_token": "2fa_challenge_abc..."
 }
 ```
 
@@ -311,13 +311,13 @@ Dispatches a password reset link or 6-digit OTP code to the provided email.
 ---
 
 ### `POST /api/auth/verify-reset-otp`
-Validates a 6-digit password reset OTP and exchanges it for a temporary reset token.
+Validates a 6-digit password reset OTP and exchanges it for a temporary reset token (accepts `otp` or `code`).
 
 - **Request Body**:
 ```json
 {
   "email": "user@example.com",
-  "code": "654321"
+  "otp": "654321"
 }
 ```
 
@@ -373,13 +373,13 @@ Verifies email address via cryptographically signed route.
 ---
 
 ### `POST /api/auth/email/verify`
-Verifies email address using 6-digit OTP code.
+Verifies email address using 6-digit OTP code (accepts `otp` or `code`).
 
 - **Middleware**: `omni.auth`
 - **Request Body**:
 ```json
 {
-  "code": "819234"
+  "otp": "819234"
 }
 ```
 

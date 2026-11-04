@@ -60,6 +60,11 @@ class PasswordResetController extends Controller
             return $error;
         }
 
+        // Support both otp and code parameter names
+        if (!$request->has('otp') && $request->has('code')) {
+            $request->merge(['otp' => $request->input('code')]);
+        }
+
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'otp' => ['required', 'string'],
