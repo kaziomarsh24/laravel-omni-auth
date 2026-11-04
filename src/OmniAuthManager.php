@@ -21,14 +21,24 @@ use Illuminate\Validation\ValidationException;
 use KaziOmar\OmniAuth\Http\Resources\OmniUserResource;
 use KaziOmar\OmniAuth\Services\ClientDetector;
 use KaziOmar\OmniAuth\Services\CookieManager;
+use KaziOmar\OmniAuth\Services\DeviceManager;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class OmniAuthManager
 {
     public function __construct(
         protected ClientDetector $clientDetector,
-        protected CookieManager $cookieManager
+        protected CookieManager $cookieManager,
+        protected DeviceManager $deviceManager
     ) {}
+
+    /**
+     * Access the multi-device & FCM management service.
+     */
+    public function devices(): DeviceManager
+    {
+        return $this->deviceManager;
+    }
 
     /**
      * Attempt to authenticate a user using credentials (e.g. email/username/phone & password).
@@ -288,6 +298,11 @@ class OmniAuthManager
         $accessTokenObj = $user->createToken('access_token', ['access-api'], $accessTokenExpiresAt);
         $accessToken = $accessTokenObj->plainTextToken;
 
+        // Track active device session & FCM token if deviceTracking feature is enabled
+        if (Features::enabled(Features::deviceTracking())) {
+            $this->deviceManager->track($user, $request, $accessTokenObj->accessToken);
+        }
+
         // 2. Generate Refresh Token via Sanctum (if token rotation is enabled)
         $refreshToken = null;
         if (Features::enabled(Features::tokenRotation())) {
@@ -359,8 +374,8 @@ class OmniAuthManager
         $tokenHash = hash('sha256', $refreshToken);
         $revokedKey = 'omni_revoked_token:' . $tokenHash;
 
-        if (Cache::has($revokedKey)) {
-            $compromisedUserId = Cache::get($revokedKey);
+        if ($this->cache()->has($revokedKey)) {
+            $compromisedUserId = $this->cache()->get($revokedKey);
             $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
 
             if ($compromisedUserId) {
@@ -410,7 +425,7 @@ class OmniAuthManager
 
         // Record the revoked token hash in cache to detect any future replay attempts
         $refreshTtl = (int) config('omni-auth.tokens.refresh_token_ttl', 43200);
-        Cache::put($revokedKey, $user->getAuthIdentifier(), now()->addMinutes($refreshTtl));
+        $this->cache()->put($revokedKey, $user->getAuthIdentifier(), now()->addMinutes($refreshTtl));
 
         // 4. Issue new token pair
         return $this->issueTokenResponse($user, $request, 'Token refreshed successfully.');
@@ -451,8 +466,19 @@ class OmniAuthManager
         if ($user) {
             if ($allDevices && method_exists($user, 'tokens')) {
                 $user->tokens()->delete();
+                if (Features::enabled(Features::deviceTracking())) {
+                    $this->deviceManager->logoutOthers($user, $request);
+                    $this->deviceManager->cleanupOnLogout($user, $request);
+                }
             } elseif (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
                 $user->currentAccessToken()->delete();
+                if (Features::enabled(Features::deviceTracking())) {
+                    $this->deviceManager->cleanupOnLogout($user, $request);
+                }
+            } else {
+                if (Features::enabled(Features::deviceTracking())) {
+                    $this->deviceManager->cleanupOnLogout($user, $request);
+                }
             }
 
             event(new Logout($guard, $user));
@@ -561,5 +587,15 @@ class OmniAuthManager
     public function client(): ClientDetector
     {
         return $this->clientDetector;
+    }
+
+    /**
+     * Resolve the configured cache store instance.
+     */
+    public function cache(): \Illuminate\Contracts\Cache\Repository
+    {
+        $store = config('omni-auth.cache_store');
+
+        return $store ? Cache::store($store) : Cache::store();
     }
 }

@@ -46,13 +46,13 @@ Status format:
 ---
 
 ## Module 4: Multi-Device Management & FCM Token Lifecycle
-28. [ ] Opt-in database migration for device session records (`auth_devices`).
-29. [ ] Device fingerprinting extracting IP address, User-Agent, and client platform names.
-30. [ ] Unified FCM push notification token storage mapped to individual client devices.
-31. [ ] Automatic FCM token cleanup upon device logout to prevent unauthorized notification routing.
-32. [ ] Active devices listing API (`Omni::devices()->all()`).
-33. [ ] Remote single-device session revocation endpoint (`Omni::devices()->revoke($id)`).
-34. [ ] Revocation of all other active sessions while preserving current device session (`logoutOthers`).
+28. [x] Opt-in database migration for device session records (`auth_devices`).
+29. [x] Device fingerprinting extracting IP address, User-Agent, and client platform names.
+30. [x] Unified FCM push notification token storage mapped to individual client devices.
+31. [x] Automatic FCM token cleanup upon device logout to prevent unauthorized notification routing.
+32. [x] Active devices listing API (`Omni::devices()->all()`).
+33. [x] Remote single-device session revocation endpoint (`Omni::devices()->revoke($id)`).
+34. [x] Revocation of all other active sessions while preserving current device session (`logoutOthers`).
 
 ---
 

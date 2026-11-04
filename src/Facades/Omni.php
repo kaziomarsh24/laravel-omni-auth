@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool isWeb(?\Illuminate\Http\Request $request = null)
  * @method static \KaziOmar\OmniAuth\Services\CookieManager cookies()
  * @method static \KaziOmar\OmniAuth\Services\ClientDetector client()
+ * @method static \KaziOmar\OmniAuth\Services\DeviceManager devices()
  *
  * @see \KaziOmar\OmniAuth\OmniAuthManager
  */

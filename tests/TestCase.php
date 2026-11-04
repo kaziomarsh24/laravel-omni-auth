@@ -59,6 +59,10 @@ abstract class TestCase extends Orchestra
         // 2. Run Sanctum's personal_access_tokens migration
         $sanctumMigration = require __DIR__ . '/../vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php';
         $sanctumMigration->up();
+
+        // 3. Run auth_devices migration
+        $deviceMigration = require __DIR__ . '/../database/migrations/2026_01_01_000001_create_auth_devices_table.php';
+        $deviceMigration->up();
     }
 }
 
