@@ -32,6 +32,23 @@ flowchart TD
 
 ---
 
+## 4-Tier Client Detection Hierarchy
+
+OmniAuth evaluates incoming requests deterministically in the following strict order:
+
+1. **Explicit Header (`X-Client-Type`) — Highest Priority**:
+   - `X-Client-Type: mobile` → Delivers tokens directly in JSON body.
+   - `X-Client-Type: web` → Sets secure SameSite HttpOnly cookies.
+2. **Bearer Authorization Header (`Authorization: Bearer ...`)**:
+   - If an authenticated request attaches an `Authorization: Bearer <token>` header and `treat_bearer_as_mobile => true` (default), OmniAuth treats it as an API/Mobile client.
+   - *(Note: You can toggle `OMNI_TREAT_BEARER_AS_MOBILE=false` if your web SPA attaches manual Bearer headers but you still want cookie-based clearance on logout).*
+3. **User-Agent Runtime Signatures**:
+   - If User-Agent contains native mobile runtimes (`Dart`, `Flutter`, `OkHttp`, `Dalvik`, `CFNetwork`, `Alamofire`) or API testing tools (`Postman`, `Insomnia`, `curl`, `httpie`), it is classified as mobile.
+4. **Configurable Default Fallback**:
+   - When no headers or mobile signatures are detected (standard browsers like Chrome, Safari, Firefox), it falls back to `web` (`OMNI_DEFAULT_CLIENT`, default: `'web'`).
+
+---
+
 ## Web Client Implementation Details
 
 When a browser makes a request to `/api/auth/login`:

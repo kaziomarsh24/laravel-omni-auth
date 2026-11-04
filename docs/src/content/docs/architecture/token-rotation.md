@@ -42,12 +42,12 @@ sequenceDiagram
     Backend-->>Client: 401 Unauthorized (Session terminated)
 ```
 
-### Single-Use Refresh Tokens
+### Single-Use Refresh Tokens & Atomic Concurrency Guard
 Refresh tokens are strictly single-use. When [`POST /api/auth/refresh`](/laravel-omni-auth/reference/api-reference/#post-apiauthrefresh) is called:
-- OmniAuth validates the provided refresh token.
-- The existing refresh token is immediately deleted from the database.
-- A new access token and a new sliding refresh token are generated.
-- If a revoked refresh token is presented again, the request fails with HTTP 401.
+- **Atomic Concurrency Lock**: OmniAuth acquires an atomic lock on the refresh token hash (`omni_refresh_lock:<hash>`). If mobile network instability causes duplicate concurrent refresh requests to arrive simultaneously, only one request executes while the other receives `HTTP 429 Too Many Requests`, preventing race conditions and duplicate token issuance.
+- **Immediate Burn**: The existing refresh token is immediately deleted from the database.
+- **Sliding Renewal**: A fresh short-lived access token (default 15 mins) and a new sliding refresh token (default 30 days) are issued.
+- **Replay Attack Detection**: Rotated token hashes are recorded in the cache within a lightweight 15-minute detection window (`replay_detection_ttl`). If an attacker attempts to replay an already burned refresh token, OmniAuth immediately triggers an **Account-Wide Security Lockout**, terminating all active sessions for that account.
 
 ---
 

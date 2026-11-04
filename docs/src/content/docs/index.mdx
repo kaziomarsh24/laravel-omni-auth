@@ -48,7 +48,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Verified Test Coverage Matrix
 
-Every release of Laravel OmniAuth is verified by an exhaustive automated test suite comprising **94 tests** and **514 assertions** spanning 10 architectural domains. The package has undergone two consecutive rounds of whitebox penetration auditing to ensure full resistance against credential stuffing, token replay, algorithm confusion, and session hijacking.
+Every release of Laravel OmniAuth is verified by an exhaustive automated test suite comprising **101 tests** and **539 assertions** spanning 10 architectural domains. The package has undergone two consecutive rounds of whitebox penetration auditing to ensure full resistance against credential stuffing, token replay, algorithm confusion, and session hijacking.
 
 | Test Domain | Target Scenarios Verified | Tests / Assertions | Status |
 | :--- | :--- | :---: | :---: |
@@ -61,6 +61,7 @@ Every release of Laravel OmniAuth is verified by an exhaustive automated test su
 | **Registration & Hydration** | Dynamic field persistence, mass-assignment guards, case variants, default role assignment | 12 tests (68 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Passwordless & GDPR** | Cryptographic 6-digit OTPs, signed magic links with host validation, full GDPR account cleanup | 7 tests (38 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Penetration Security Audits** | Timing attacks, token confusion (HS256 vs RS256), Origin header spoofing, CSRF enforcement, URL tricks | 29 tests (132 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Concurrency & Hardening** | Atomic token refresh locks, 2FA setup concurrency, recovery code single-use under lock, subquery zero-memory token pruning | 7 tests (25 assertions) | <span class="badge-passed">✓ Passed</span> |
 
 :::tip[Run Tests Locally]
 You can execute the entire test suite locally in your terminal at any time:

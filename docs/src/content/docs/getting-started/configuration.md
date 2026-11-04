@@ -16,6 +16,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | Environment Variable | Config Key | Default | Description | Deep Guide Link |
 | :--- | :--- | :---: | :--- | :--- |
 | `OMNI_DEFAULT_CLIENT` | `client_detection.default_client` | `'web'` | Fallback client mode when headers/signatures are omitted (`'web'` or `'mobile'`). | [Dual-Mode Tokens](/laravel-omni-auth/architecture/dual-mode-tokens/) |
+| `OMNI_TREAT_BEARER_AS_MOBILE` | `client_detection.treat_bearer_as_mobile` | `true` | When `true`, requests with `Authorization: Bearer` headers are automatically classified as API/Mobile clients. | [Dual-Mode Tokens](/laravel-omni-auth/architecture/dual-mode-tokens/) |
 | `OMNI_COOKIE_NAME` | `cookie.name` | `'omni_access_token'` | Name of the encrypted HttpOnly access token cookie. | [Dual-Mode Tokens](/laravel-omni-auth/architecture/dual-mode-tokens/) |
 | `OMNI_REFRESH_COOKIE_NAME` | `cookie.refresh_name` | `'omni_refresh_token'` | Name of the encrypted HttpOnly refresh token cookie. | [Token Rotation](/laravel-omni-auth/architecture/token-rotation/) |
 | `OMNI_COOKIE_DOMAIN` | `cookie.domain` | `null` | Cookie domain (e.g. `'.example.com'` for cross-subdomain SSO). | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
@@ -24,6 +25,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_CSRF_PROTECTION` | `cookie.csrf_protection` | `true` | Enforces custom headers on state-changing cookie requests. | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_ACCESS_TOKEN_TTL` | `tokens.access_token_ttl` | `15` | Access token lifespan in minutes before rotation is required. | [Token Rotation](/laravel-omni-auth/architecture/token-rotation/) |
 | `OMNI_REFRESH_TOKEN_TTL` | `tokens.refresh_token_ttl` | `43200` | Refresh token sliding expiration in minutes (default 30 days). | [Token Rotation](/laravel-omni-auth/architecture/token-rotation/) |
+| `OMNI_REPLAY_DETECTION_TTL` | `tokens.replay_detection_ttl` | `15` | Replay attack detection window in minutes for rotated refresh tokens (prevents Redis memory bloat). | [Token Rotation](/laravel-omni-auth/architecture/token-rotation/) |
 | `OMNI_USER_MODEL` | `user_model` | `'App\\Models\\User'` | Fully-qualified Eloquent user model class. | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_IDENTIFIER_COLUMN` | `identifier_column` | `'email'` | Primary login identifier column (`'email'`, `'username'`, or `'phone'`). | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_USER_RESOURCE` | `user_resource` | `null` | Custom JsonResource class (defaults to built-in `OmniUserResource`). | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
@@ -104,13 +106,20 @@ OmniAuth inspects incoming requests to automatically distinguish between web bro
     'default_client' => env('OMNI_DEFAULT_CLIENT', 'web'),
     'header_name' => 'X-Client-Type',
     'mobile_value' => 'mobile',
+    'treat_bearer_as_mobile' => env('OMNI_TREAT_BEARER_AS_MOBILE', true),
     'inspect_user_agent' => true,
 ],
 ```
 
 - When `X-Client-Type: mobile` is provided, responses deliver tokens directly in the JSON body (`access_token`, `refresh_token`).
-- When `X-Client-Type` is omitted, OmniAuth inspects the `User-Agent` header for mobile runtime signatures (e.g., Dart, Flutter, Dalvik, CFNetwork). If no mobile signatures exist, it defaults to `web`, setting secure HttpOnly cookies.
-- For deep architectural insights into client detection, read the [Dual-Mode Architecture Guide](/laravel-omni-auth/architecture/dual-mode-tokens/).
+- When `treat_bearer_as_mobile` is `true` (default), any request sending an `Authorization: Bearer <token>` header (such as Flutter, React Native, or API tools like Postman/cURL) is automatically classified as a mobile/API client.
+- When `X-Client-Type` and `Authorization` headers are omitted, OmniAuth inspects the `User-Agent` header for mobile runtime signatures (e.g., Dart, Flutter, Dalvik, CFNetwork). If no mobile signatures exist, it defaults to `web`, setting secure HttpOnly cookies.
+
+:::tip[Do I need to change `OMNI_TREAT_BEARER_AS_MOBILE`?]
+**In 99% of projects, no!** Leave it as `true`. Only toggle this to `false` if you are building a custom web browser SPA where you deliberately attach Bearer tokens in headers manually, yet you still want OmniAuth's logout handler to clear HttpOnly cookies on the browser.
+:::
+
+For deep architectural insights into client detection, read the [Dual-Mode Architecture Guide](/laravel-omni-auth/architecture/dual-mode-tokens/).
 
 ---
 
@@ -143,8 +152,13 @@ Configures token expiration periods:
 'tokens' => [
     'access_token_ttl' => env('OMNI_ACCESS_TOKEN_TTL', 15),     // 15 minutes
     'refresh_token_ttl' => env('OMNI_REFRESH_TOKEN_TTL', 43200), // 30 days (in minutes)
+    'replay_detection_ttl' => env('OMNI_REPLAY_DETECTION_TTL', 15), // 15 minutes replay detection window
 ],
 ```
+
+- `access_token_ttl`: Lifespan in minutes for short-lived access tokens.
+- `refresh_token_ttl`: Sliding window in minutes for long-lived refresh tokens.
+- `replay_detection_ttl`: Lightweight detection window in minutes during which any attempt to replay an already rotated refresh token triggers an immediate account-wide session lockout. Keeping this at 15 minutes ensures maximum replay protection without bloating Redis memory with 30-day token hashes.
 
 For details on single-use refresh token rotation, replay attack prevention, and cascade revocation, read the [Token Rotation Guide](/laravel-omni-auth/architecture/token-rotation/).
 
