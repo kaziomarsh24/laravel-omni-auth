@@ -345,10 +345,13 @@ class OmniAuthManager
 
         // 3. Merge additional explicit data passed by developer (strip guarded keys to prevent mass-assignment)
         if (!empty($additionalData)) {
-            $guardedKeys = (array) config('omni-auth.registration.guarded_keys', [
-                'id', 'is_admin', 'role', 'roles', 'permissions', 'email_verified_at', 'remember_token',
-            ]);
-            $safeAdditional = array_diff_key($additionalData, array_flip($guardedKeys));
+            $guardedLower = array_map('strtolower', $guardedKeys);
+            $safeAdditional = [];
+            foreach ($additionalData as $key => $value) {
+                if (!in_array(strtolower((string) $key), $guardedLower, true)) {
+                    $safeAdditional[$key] = $value;
+                }
+            }
             $attributes = array_merge($attributes, $safeAdditional);
         }
 

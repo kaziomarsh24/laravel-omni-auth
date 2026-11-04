@@ -156,4 +156,47 @@ class RedTeamFixesTest extends TestCase
 
         $lock->release();
     }
+
+    public function test_registration_additional_data_blocks_is_staff_and_tenant_id(): void
+    {
+        $response = Omni::register([
+            'name' => 'Staff Attacker',
+            'email' => 'staff_att@example.com',
+            'password' => 'SecurePass123!',
+            'password_confirmation' => 'SecurePass123!',
+        ], [
+            'is_staff' => true,
+            'is_superuser' => true,
+            'tenant_id' => 999,
+            'phone' => '+1234567890',
+        ]);
+
+        $this->assertEquals(201, $response->getStatusCode());
+        $user = TestUser::where('email', 'staff_att@example.com')->first();
+        $this->assertNotNull($user);
+
+        // Custom model attributes from guarded list MUST NOT exist or be assigned
+        $this->assertNull($user->getAttribute('is_staff'));
+        $this->assertNull($user->getAttribute('is_superuser'));
+        $this->assertNull($user->getAttribute('tenant_id'));
+
+        // Unguarded phone MUST be preserved
+        $this->assertEquals('+1234567890', $user->phone);
+    }
+
+    public function test_client_detector_respects_treat_bearer_as_mobile_flag(): void
+    {
+        $request = Request::create('/api/auth/me', 'GET', [], [], [], [
+            'HTTP_AUTHORIZATION' => 'Bearer some-test-token',
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+        ]);
+
+        // When treat_bearer_as_mobile = true (default)
+        config(['omni-auth.client_detection.treat_bearer_as_mobile' => true]);
+        $this->assertTrue(Omni::isMobile($request));
+
+        // When treat_bearer_as_mobile = false
+        config(['omni-auth.client_detection.treat_bearer_as_mobile' => false]);
+        $this->assertFalse(Omni::isMobile($request));
+    }
 }

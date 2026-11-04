@@ -19,8 +19,9 @@ class ClientDetector
             return strtolower((string) $request->header($headerName)) === strtolower($mobileValue);
         }
 
-        // 2. If client explicitly requests Bearer JSON
-        if ($request->hasHeader('Authorization') && str_starts_with((string) $request->header('Authorization'), 'Bearer ')) {
+        // 2. If client explicitly requests Bearer JSON and treat_bearer_as_mobile is enabled
+        $treatBearerAsMobile = (bool) config('omni-auth.client_detection.treat_bearer_as_mobile', true);
+        if ($treatBearerAsMobile && $request->hasHeader('Authorization') && str_starts_with((string) $request->header('Authorization'), 'Bearer ')) {
             return true;
         }
 

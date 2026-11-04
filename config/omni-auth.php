@@ -43,6 +43,9 @@ return [
         // Value that identifies a mobile client
         'mobile_value' => 'mobile',
 
+        // When true, requests with Authorization: Bearer headers are treated as mobile/API clients
+        'treat_bearer_as_mobile' => env('OMNI_TREAT_BEARER_AS_MOBILE', true),
+
         // Auto-inspect User-Agent for mobile signatures when header is omitted
         'inspect_user_agent' => true,
     ],

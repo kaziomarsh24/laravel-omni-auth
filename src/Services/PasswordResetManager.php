@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -117,8 +118,8 @@ class PasswordResetManager
         }
 
         if ($attempts >= $maxAttempts) {
-            $this->cache()->forget($otpKey);
-            $this->cache()->forget($attemptsKey);
+            $this->forgetCache($otpKey);
+            $this->forgetCache($attemptsKey);
             throw ValidationException::withMessages([
                 'otp' => ['Too many failed reset attempts. Please request a new passcode.'],
             ]);
@@ -130,8 +131,8 @@ class PasswordResetManager
         }
 
         // Clear OTP immediately (single-use)
-        $this->cache()->forget($otpKey);
-        $this->cache()->forget($attemptsKey);
+        $this->forgetCache($otpKey);
+        $this->forgetCache($attemptsKey);
 
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
         $identifierColumn = config('omni-auth.identifier_column', 'email');
@@ -177,7 +178,7 @@ class PasswordResetManager
         $user = $userModelClass::find($userId);
 
         if (!$user) {
-            $this->cache()->forget($tokenKey);
+            $this->forgetCache($tokenKey);
             return false;
         }
 
@@ -186,7 +187,7 @@ class PasswordResetManager
         $user->save();
 
         // Invalidate reset token immediately
-        $this->cache()->forget($tokenKey);
+        $this->forgetCache($tokenKey);
 
         // Global Session Revocation: terminate all existing tokens across all devices
         if (method_exists($user, 'tokens')) {
@@ -296,8 +297,8 @@ class PasswordResetManager
                 return false;
             }
 
-            $this->cache()->forget($otpKey);
-            $this->cache()->forget($throttleKey);
+            $this->forgetCache($otpKey);
+            $this->forgetCache($throttleKey);
         } elseif ($hash) {
             // C5: URL verification MUST have a valid cryptographic signature and matching hash
             if (!$request->hasValidSignature()) {
@@ -439,8 +440,8 @@ class PasswordResetManager
             $attempts = (int) $this->cache()->get($attemptsKey, 0);
 
             if ($attempts >= 5) {
-                $this->cache()->forget("omni_magic_code_{$normalizedEmail}");
-                $this->cache()->forget($attemptsKey);
+                $this->forgetCache("omni_magic_code_{$normalizedEmail}");
+                $this->forgetCache($attemptsKey);
                 throw ValidationException::withMessages([
                     'code' => ['Too many failed magic code attempts. Please request a new link.'],
                 ]);
@@ -453,8 +454,8 @@ class PasswordResetManager
             }
 
             $token = $codeData['token'];
-            $this->cache()->forget("omni_magic_code_{$normalizedEmail}");
-            $this->cache()->forget($attemptsKey);
+            $this->forgetCache("omni_magic_code_{$normalizedEmail}");
+            $this->forgetCache($attemptsKey);
         }
 
         $tokenKey = "omni_magic_token_{$token}";
@@ -464,7 +465,7 @@ class PasswordResetManager
             return null;
         }
 
-        $this->cache()->forget($tokenKey);
+        $this->forgetCache($tokenKey);
 
         $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
         /** @var (Authenticatable&Model)|null $user */
@@ -525,5 +526,17 @@ class PasswordResetManager
         }
 
         return (bool) $user->delete();
+    }
+
+    /**
+     * Invalidate cache key safely, respecting active database transactions.
+     */
+    protected function forgetCache(string $key): void
+    {
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit(fn () => $this->cache()->forget($key));
+        } else {
+            $this->cache()->forget($key);
+        }
     }
 }
