@@ -281,14 +281,23 @@ class PasswordResetManager
 
         // 1. Verify via numeric OTP if provided
         if ($otp) {
+            $throttleKey = "omni_email_otp_attempts_{$user->getAuthIdentifier()}";
+            $attempts = (int) $this->cache()->get($throttleKey, 0);
+
+            if ($attempts >= 5) {
+                return false;
+            }
+
             $otpKey = "omni_email_verify_otp_{$user->getAuthIdentifier()}";
             $hashedOtp = $this->cache()->get($otpKey);
 
             if (!$hashedOtp || !Hash::check(trim($otp), $hashedOtp)) {
+                $this->cache()->put($throttleKey, $attempts + 1, now()->addMinutes(10));
                 return false;
             }
 
             $this->cache()->forget($otpKey);
+            $this->cache()->forget($throttleKey);
         } elseif ($hash) {
             // C5: URL verification MUST have a valid cryptographic signature and matching hash
             if (!$request->hasValidSignature()) {
@@ -376,6 +385,13 @@ class PasswordResetManager
      */
     public function validateRedirectUrl(string $url): void
     {
+        // Reject dangerous characters that trick URL parsers (backslashes, userinfo @, fragments before path)
+        if (str_contains($url, '\\') || str_contains($url, '@')) {
+            throw ValidationException::withMessages([
+                'redirect_url' => ['Untrusted redirect URL domain. Redirect destination is not in allowed hosts.'],
+            ]);
+        }
+
         $parsed = parse_url($url);
         $scheme = strtolower($parsed['scheme'] ?? '');
         $host = strtolower($parsed['host'] ?? '');
@@ -386,20 +402,20 @@ class PasswordResetManager
             return;
         }
 
-        // Allow matching app URL
+        // Exact match with configured app URL host
         $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
-        if (!empty($host) && !empty($appHost) && ($host === $appHost || str_ends_with($host, '.' . $appHost))) {
+        if (!empty($host) && !empty($appHost) && $host === $appHost) {
             return;
         }
 
-        // Allow configured redirect hosts
+        // Allow configured redirect hosts (exact match)
         $allowedHosts = (array) config('omni-auth.allowed_redirect_hosts', []);
         if (!empty($host) && in_array($host, $allowedHosts, true)) {
             return;
         }
 
-        // Allow localhost for local development / testing
-        if ($host === 'localhost' || $host === '127.0.0.1') {
+        // Allow localhost strictly for local/testing environments
+        if (app()->environment('local', 'testing') && ($host === 'localhost' || $host === '127.0.0.1')) {
             return;
         }
 
@@ -469,12 +485,18 @@ class PasswordResetManager
      */
     public function deleteAccount(Authenticatable|Model $user, ?string $password = null): bool
     {
-        // If account has a password set, require and verify confirmation password
+        $userId = $user->getAuthIdentifier();
+        $isSocialAccount = AuthSocialAccount::where('user_id', $userId)->exists();
+
+        // If user has a password and is not a social-only user, or if password is provided, verify it
         if (!empty($user->password)) {
-            if (empty($password) || !Hash::check($password, $user->password)) {
-                throw ValidationException::withMessages([
-                    'password' => ['Incorrect password confirmation provided for account deletion.'],
-                ]);
+            // Social-only accounts have an auto-generated random password; allow deletion without password
+            if (!$isSocialAccount || !empty($password)) {
+                if (empty($password) || !Hash::check($password, $user->password)) {
+                    throw ValidationException::withMessages([
+                        'password' => ['Incorrect password confirmation provided for account deletion.'],
+                    ]);
+                }
             }
         }
 

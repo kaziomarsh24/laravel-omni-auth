@@ -48,9 +48,23 @@ class VerificationController extends Controller
         $user = $request->user();
 
         // If clicking email link in a browser, resolve user from signed route ID
-        if (!$user && $request->route('id')) {
+        if ($request->route('id')) {
+            if (!$request->hasValidSignature()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Invalid, expired, or tampered verification link or code.',
+                ], 422);
+            }
+
             $userModelClass = config('omni-auth.user_model', 'App\\Models\\User');
             $user = $userModelClass::find($request->route('id'));
+
+            if (!$user) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Invalid, expired, or tampered verification link or code.',
+                ], 422);
+            }
         }
 
         if (!$user) {

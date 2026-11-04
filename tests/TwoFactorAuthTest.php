@@ -55,8 +55,10 @@ class TwoFactorAuthTest extends TestCase
     {
         $this->actingAs($this->user, 'sanctum');
 
-        // 1. Initiate 2FA Setup
-        $setupResponse = $this->postJson('/api/auth/2fa/setup');
+        // 1. Initiate 2FA Setup with password confirmation
+        $setupResponse = $this->postJson('/api/auth/2fa/setup', [
+            'password' => 'Password123!',
+        ]);
         $setupResponse->assertStatus(200)
             ->assertJsonPath('ok', true)
             ->assertJsonStructure([
@@ -238,8 +240,10 @@ class TwoFactorAuthTest extends TestCase
 
         $this->actingAs($this->user, 'sanctum');
 
-        // 1. Regenerate recovery codes
-        $regenRes = $this->postJson('/api/auth/2fa/recovery-codes');
+        // 1. Regenerate recovery codes with password confirmation
+        $regenRes = $this->postJson('/api/auth/2fa/recovery-codes', [
+            'password' => 'Password123!',
+        ]);
         $regenRes->assertStatus(200)
             ->assertJsonPath('ok', true);
 

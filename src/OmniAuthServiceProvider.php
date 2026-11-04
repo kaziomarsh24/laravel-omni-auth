@@ -81,6 +81,19 @@ class OmniAuthServiceProvider extends ServiceProvider
                 $cookieName = config('omni-auth.cookie.name', 'omni_access_token');
                 return $request->cookie($cookieName);
             });
+
+            // H1: Globally prevent refresh tokens from authenticating API routes (including stock auth:sanctum)
+            Sanctum::authenticateAccessTokensUsing(function ($accessToken, bool $isValid) {
+                if (!$isValid) {
+                    return false;
+                }
+
+                if ($accessToken->name === 'refresh_token' || !$accessToken->can('access-api')) {
+                    return false;
+                }
+
+                return true;
+            });
         }
 
         // Register middleware alias

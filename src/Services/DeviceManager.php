@@ -20,7 +20,8 @@ class DeviceManager
         ?Request $request = null,
         ?PersonalAccessToken $token = null,
         ?string $fcmToken = null,
-        ?string $deviceName = null
+        ?string $deviceName = null,
+        ?PersonalAccessToken $refreshToken = null
     ): AuthDevice {
         $request = $request ?? request();
 
@@ -40,6 +41,7 @@ class DeviceManager
 
         $attributes = [
             'token_id' => $token?->id ?? $device?->token_id,
+            'refresh_token_id' => $refreshToken?->id ?? $device?->refresh_token_id,
             'device_name' => $resolvedDeviceName,
             'platform' => $platform,
             'ip_address' => $request->ip(),
@@ -152,9 +154,12 @@ class DeviceManager
             return false;
         }
 
-        // Delete associated Sanctum token if present
+        // Delete associated Sanctum access and refresh tokens if present
         if ($device->token_id) {
             PersonalAccessToken::where('id', $device->token_id)->delete();
+        }
+        if ($device->refresh_token_id) {
+            PersonalAccessToken::where('id', $device->refresh_token_id)->delete();
         }
 
         return (bool) $device->delete();
@@ -180,7 +185,11 @@ class DeviceManager
             ->when($currentId, fn($q) => $q->where('id', '!=', $currentId))
             ->get();
 
-        $tokenIdsToDelete = $devicesToRevoke->pluck('token_id')->filter()->values()->all();
+        $tokenIdsToDelete = $devicesToRevoke->pluck('token_id')
+            ->merge($devicesToRevoke->pluck('refresh_token_id'))
+            ->filter()
+            ->values()
+            ->all();
 
         if (!empty($tokenIdsToDelete)) {
             PersonalAccessToken::whereIn('id', $tokenIdsToDelete)->delete();

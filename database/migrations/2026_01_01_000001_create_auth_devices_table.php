@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id')->index();
             $table->unsignedBigInteger('token_id')->nullable()->index();
+            $table->unsignedBigInteger('refresh_token_id')->nullable()->index();
             $table->string('device_id')->index();
             $table->string('device_name')->default('Unknown Device');
             $table->string('platform')->nullable();

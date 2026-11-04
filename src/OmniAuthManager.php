@@ -95,10 +95,10 @@ class OmniAuthManager
         $identifier = $credentials[$identifierColumn] ?? $credentials['email'] ?? $credentials['username'] ?? $credentials['phone'] ?? null;
         $password = $credentials['password'] ?? null;
 
-        if (!$identifier || !$password) {
+        if (!is_string($identifier) || !is_string($password) || trim($identifier) === '' || trim($password) === '') {
             return response()->json([
                 'ok' => false,
-                'message' => 'Credentials must include an identifier and password.',
+                'message' => 'Credentials must include a valid identifier and password.',
             ], 422);
         }
 
@@ -158,6 +158,17 @@ class OmniAuthManager
 
         // 4. Two-Factor Authentication Challenge Check (Must precede Login event)
         if (Features::enabled(Features::twoFactorAuth()) && $this->twoFactorManager->isEnabled($user)) {
+            $farmingKey = "omni_2fa_challenge_farming:{$user->getAuthIdentifier()}";
+            if (RateLimiter::tooManyAttempts($farmingKey, 5)) {
+                $seconds = RateLimiter::availableIn($farmingKey);
+                return response()->json([
+                    'ok' => false,
+                    'message' => "Too many two-factor challenges generated for this account. Please wait {$seconds} seconds.",
+                    'retry_after' => $seconds,
+                ], 429);
+            }
+            RateLimiter::hit($farmingKey, 600);
+
             $twoFactorToken = $this->twoFactorManager->createChallengeToken($user);
 
             return response()->json([
@@ -252,14 +263,32 @@ class OmniAuthManager
             }
 
             $allowedAttributes = config('omni-auth.registration.allowed_attributes');
+            $guardedKeysLower = array_map('strtolower', $guardedKeys);
+
+            $filterGuardedKeys = function (array $data) use ($guardedKeysLower): array {
+                $filtered = [];
+                foreach ($data as $key => $value) {
+                    if (!in_array(strtolower((string) $key), $guardedKeysLower, true)) {
+                        $filtered[$key] = $value;
+                    }
+                }
+                return $filtered;
+            };
+
             if (!empty($allowedAttributes) && is_array($allowedAttributes)) {
-                $attributes = array_intersect_key($requestOrData->all(), array_flip($allowedAttributes));
+                $allowedLower = array_map('strtolower', $allowedAttributes);
+                $attributes = [];
+                foreach ($requestOrData->all() as $k => $v) {
+                    if (in_array(strtolower((string) $k), $allowedLower, true) && !in_array(strtolower((string) $k), $guardedKeysLower, true)) {
+                        $attributes[$k] = $v;
+                    }
+                }
                 $attributes = array_merge($attributes, $validator->validated());
             } else {
-                $safeInput = array_diff_key($requestOrData->all(), array_flip($guardedKeys));
+                $safeInput = $filterGuardedKeys($requestOrData->all());
                 $attributes = array_merge($safeInput, $validator->validated());
             }
-            $attributes = array_diff_key($attributes, array_flip($guardedKeys));
+            $attributes = $filterGuardedKeys($attributes);
         } else {
             // Raw array passed
             $attributes = $requestOrData;
@@ -281,14 +310,37 @@ class OmniAuthManager
             }
 
             $allowedAttributes = config('omni-auth.registration.allowed_attributes');
+            $guardedKeysLower = array_map('strtolower', $guardedKeys);
+
+            $filterGuardedKeys = function (array $data) use ($guardedKeysLower): array {
+                $filtered = [];
+                foreach ($data as $key => $value) {
+                    if (!in_array(strtolower((string) $key), $guardedKeysLower, true)) {
+                        $filtered[$key] = $value;
+                    }
+                }
+                return $filtered;
+            };
+
             if (!empty($allowedAttributes) && is_array($allowedAttributes)) {
-                $attributes = array_intersect_key($attributes, array_flip($allowedAttributes));
-                $attributes = array_merge($attributes, $validator->validated());
+                $allowedLower = array_map('strtolower', $allowedAttributes);
+                $filtered = [];
+                foreach ($attributes as $k => $v) {
+                    if (in_array(strtolower((string) $k), $allowedLower, true) && !in_array(strtolower((string) $k), $guardedKeysLower, true)) {
+                        $filtered[$k] = $v;
+                    }
+                }
+                $attributes = array_merge($filtered, $validator->validated());
             } else {
-                $safeInput = array_diff_key($attributes, array_flip($guardedKeys));
+                $safeInput = $filterGuardedKeys($attributes);
                 $attributes = array_merge($safeInput, $validator->validated());
             }
-            $attributes = array_diff_key($attributes, array_flip($guardedKeys));
+            $attributes = $filterGuardedKeys($attributes);
+        }
+
+        // Normalize email to lowercase
+        if (isset($attributes['email']) && is_string($attributes['email'])) {
+            $attributes['email'] = strtolower(trim($attributes['email']));
         }
 
         // 3. Merge additional explicit data passed by developer
@@ -373,17 +425,19 @@ class OmniAuthManager
         $accessTokenObj = $user->createToken('access_token', ['access-api'], $accessTokenExpiresAt);
         $accessToken = $accessTokenObj->plainTextToken;
 
-        // Track active device session & FCM token if deviceTracking feature is enabled
-        if (Features::enabled(Features::deviceTracking())) {
-            $this->deviceManager->track($user, $request, $accessTokenObj->accessToken);
-        }
-
         // 2. Generate Refresh Token via Sanctum (if token rotation is enabled)
         $refreshToken = null;
+        $refreshTokenModel = null;
         if (Features::enabled(Features::tokenRotation())) {
             $refreshTokenExpiresAt = now()->addMinutes($refreshTtl);
             $refreshTokenObj = $user->createToken('refresh_token', ['issue-access-token'], $refreshTokenExpiresAt);
             $refreshToken = $refreshTokenObj->plainTextToken;
+            $refreshTokenModel = $refreshTokenObj->accessToken;
+        }
+
+        // Track active device session & FCM token if deviceTracking feature is enabled
+        if (Features::enabled(Features::deviceTracking())) {
+            $this->deviceManager->track($user, $request, $accessTokenObj->accessToken, null, null, $refreshTokenModel);
         }
 
         $isMobile = $this->clientDetector->isMobile($request);

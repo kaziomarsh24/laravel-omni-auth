@@ -3,3 +3,5 @@
 .DS_Store
 .env
 composer.lock
+SECURITY_LEARNINGS.md
+*.local.md

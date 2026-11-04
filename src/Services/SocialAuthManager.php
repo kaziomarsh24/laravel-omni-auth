@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use KaziOmar\OmniAuth\Features;
+use KaziOmar\OmniAuth\Models\AuthDevice;
 use KaziOmar\OmniAuth\Models\AuthSocialAccount;
 use KaziOmar\OmniAuth\OmniAuthManager;
 
@@ -102,11 +103,13 @@ class SocialAuthManager
     {
         // H4: Enforce OAuth CSRF State validation
         $state = $requestData['state'] ?? request('state');
-        if ($state) {
-            $cachedProvider = Cache::pull("omni_oauth_state_{$state}");
-            if (!$cachedProvider || $cachedProvider !== $provider) {
-                throw new InvalidArgumentException('Invalid or expired OAuth state parameter. Possible CSRF attack detected.');
-            }
+        if (empty($state)) {
+            throw new InvalidArgumentException('Missing required OAuth state parameter. Possible CSRF attack detected.');
+        }
+
+        $cachedProvider = Cache::pull("omni_oauth_state_{$state}");
+        if (!$cachedProvider || $cachedProvider !== $provider) {
+            throw new InvalidArgumentException('Invalid or expired OAuth state parameter. Possible CSRF attack detected.');
         }
 
         $profile = $this->resolveProviderProfile($provider, $code, $requestData);
@@ -296,10 +299,16 @@ class SocialAuthManager
         if ($testPublicKey) {
             $signatureVerified = (openssl_verify("{$parts[0]}.{$parts[1]}", $this->base64UrlDecode($parts[2]), $testPublicKey, OPENSSL_ALGO_SHA256) === 1);
         } else {
-            $jwks = Cache::remember('omni_apple_jwks', 86400, function () {
+            $jwks = Cache::get('omni_apple_jwks');
+            if (!$jwks) {
                 $res = Http::timeout(5)->get('https://appleid.apple.com/auth/keys');
-                return $res->successful() ? (array) $res->json('keys') : [];
-            });
+                if ($res->successful() && !empty($res->json('keys'))) {
+                    $jwks = (array) $res->json('keys');
+                    Cache::put('omni_apple_jwks', $jwks, 86400);
+                } else {
+                    $jwks = [];
+                }
+            }
 
             $matchingKey = null;
             foreach ($jwks as $key) {
@@ -478,12 +487,14 @@ class SocialAuthManager
                 }
 
                 // C2: Pre-hijacking defense: if the existing account was never email-verified,
-                // purge any pre-existing attacker access tokens and verify the account now
+                // purge any pre-existing attacker access tokens, invalidate attacker's password, and verify the account now
                 if (empty($existingUser->email_verified_at)) {
                     $existingUser->email_verified_at = now();
+                    $existingUser->password = Hash::make(Str::random(64));
                     if (method_exists($existingUser, 'tokens')) {
                         $existingUser->tokens()->delete();
                     }
+                    AuthDevice::where('user_id', $existingUser->getAuthIdentifier())->delete();
                     $existingUser->save();
                 }
 
