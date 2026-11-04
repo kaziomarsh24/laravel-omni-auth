@@ -99,5 +99,18 @@ return [
     | Default Roles & Permissions
     |--------------------------------------------------------------------------
     */
-    'default_role' => env('OMNI_DEFAULT_ROLE', 'user'),
+    'default_role' => env('OMNI_DEFAULT_ROLE', null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Registration Settings
+    |--------------------------------------------------------------------------
+    | Configure auto-login behavior and default validation rules for new user
+    | registration when a FormRequest is not explicitly passed.
+    */
+    'registration' => [
+        'auto_login' => env('OMNI_REGISTRATION_AUTO_LOGIN', true),
+        'default_role' => env('OMNI_REGISTRATION_DEFAULT_ROLE', null),
+        'rules' => null, // null uses dynamic schema rules based on identifier_column
+    ],
 ];
