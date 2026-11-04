@@ -3,6 +3,8 @@ title: Device Management & Push Tokens
 description: Multi-device session tracking, remote device revocation, and push notification tokens.
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 OmniAuth tracks every authenticated session as an active device record. Users can view every browser and mobile device logged into their account, inspect IP addresses and activity timestamps, and remotely log out suspicious sessions.
 
 ---
@@ -112,7 +114,10 @@ Response:
 
 ### 4. Update Push Notification Token (FCM / APNS / Expo)
 
-Mobile clients can synchronize their device push tokens without re-authenticating:
+Mobile clients can synchronize their device push tokens without re-authenticating. OmniAuth accepts push tokens via multiple formats to support Firebase Cloud Messaging, Apple APNs, and Expo Push:
+
+<Tabs>
+  <TabItem label="Firebase FCM Payload">
 
 ```http
 POST /api/auth/devices/fcm
@@ -123,6 +128,33 @@ Content-Type: application/json
   "fcm_token": "fcm_token_sample_abc123..."
 }
 ```
+
+  </TabItem>
+  <TabItem label="Expo / React Native Payload">
+
+```http
+POST /api/auth/devices/fcm
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "push_token": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+}
+```
+
+  </TabItem>
+  <TabItem label="Silent HTTP Header (Zero-Endpoint)">
+
+Include the token on any authenticated request (e.g. `/api/auth/login`, `/api/auth/refresh`) without calling a separate endpoint:
+
+```http
+POST /api/auth/login
+X-Push-Token: ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]
+Content-Type: application/json
+```
+
+  </TabItem>
+</Tabs>
 
 Response:
 ```json

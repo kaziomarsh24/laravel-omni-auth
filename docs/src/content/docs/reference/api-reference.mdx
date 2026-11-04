@@ -273,7 +273,7 @@ When `auto_login` is disabled in `config/omni-auth.php`, no sessions or tokens a
 ---
 
 ### <span class="badge-method badge-post">POST</span> `/api/auth/refresh`
-Rotates single-use refresh token and issues a fresh access token. Enforces automatic replay attack lockout.
+Rotates single-use refresh token and issues a fresh access token. Enforces automatic replay attack lockout (see [Single-Use Token Rotation Architecture](/laravel-omni-auth/architecture/token-rotation/)).
 
 - **Route Name**: `omni.refresh`
 - **Authentication**: Valid Refresh Token (Cookie for Web, Bearer or Body for Mobile)
@@ -289,7 +289,29 @@ Rotates single-use refresh token and issues a fresh access token. Enforces autom
 | :--- | :--- | :--- | :--- | :--- |
 | `refresh_token` | `string` | No | Refresh token if not sent in Authorization header | `"4|eFgH5678..."` |
 
-#### Success Response: 200 OK
+#### Success Responses
+
+<Tabs>
+  <TabItem label="Web SPA (Cookies)">
+Automatically rotates HttpOnly SameSite cookies (`omni_access_token` and `omni_refresh_token`). Tokens are omitted from the JSON body to eliminate XSS risks.
+
+```json
+{
+  "ok": true,
+  "message": "Token refreshed successfully.",
+  "data": {
+    "user": {
+      "id": 2,
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
+  }
+}
+```
+  </TabItem>
+  <TabItem label="Mobile Client (Bearer)">
+Delivers rotated access and refresh tokens directly in the JSON response body.
+
 ```json
 {
   "ok": true,
@@ -299,6 +321,12 @@ Rotates single-use refresh token and issues a fresh access token. Enforces autom
     "refresh_token": "6|nOpQ3456...",
     "token_type": "Bearer",
     "expires_in": 900,
+    "tokens": {
+      "access_token": "5|jKlM9012...",
+      "refresh_token": "6|nOpQ3456...",
+      "token_type": "Bearer",
+      "expires_in": 900
+    },
     "user": {
       "id": 2,
       "name": "Jane Doe",
@@ -307,6 +335,8 @@ Rotates single-use refresh token and issues a fresh access token. Enforces autom
   }
 }
 ```
+  </TabItem>
+</Tabs>
 
 #### Error Responses
 - **401 Unauthorized** (Expired or already-rotated token):
@@ -478,7 +508,7 @@ Terminates all other logged-in device sessions except the current request.
 ---
 
 ### <span class="badge-method badge-post">POST</span> `/api/auth/devices/fcm`
-Synchronizes push notification tokens (FCM, APNS, Expo) for the current device session.
+Synchronizes push notification tokens (FCM, APNS, Expo) for the current device session. See the [Universal Push Token Guide](/laravel-omni-auth/features/device-management/#4-update-push-notification-token-fcm--apns--expo) for architectural details.
 
 - **Route Name**: `omni.devices.fcm`
 - **Authentication**: Required (`omni.auth`)
@@ -491,7 +521,39 @@ Synchronizes push notification tokens (FCM, APNS, Expo) for the current device s
 #### Request Parameters
 | Field | Type | Required | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
-| `fcm_token` | `string` | Yes* | Push token (also accepts `push_token` or headers) | `"ExponentPushToken[abc123xyz]"` |
+| `fcm_token` | `string` | Yes* | Push token (see [Universal Push Token Guide](/laravel-omni-auth/features/device-management/#4-update-push-notification-token-fcm--apns--expo)) | `"ExponentPushToken[abc123xyz]"` |
+
+#### Request Formats
+
+<Tabs>
+  <TabItem label="Firebase FCM">
+
+```json
+{
+  "fcm_token": "fcm_token_sample_abc123..."
+}
+```
+
+  </TabItem>
+  <TabItem label="Expo / React Native">
+
+```json
+{
+  "push_token": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+}
+```
+
+  </TabItem>
+  <TabItem label="Silent HTTP Header">
+
+Sent automatically on `/api/auth/login` or `/api/auth/refresh`:
+
+```http
+X-Push-Token: ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]
+```
+
+  </TabItem>
+</Tabs>
 
 #### Success Response: 200 OK
 ```json
@@ -507,15 +569,6 @@ Synchronizes push notification tokens (FCM, APNS, Expo) for the current device s
   }
 }
 ```
-
-:::tip[Universal Push Token & Header Auto-Tracking]
-OmniAuth accepts push tokens via:
-1. Body: `fcm_token` (Firebase Cloud Messaging convention)
-2. Body: `push_token` (Expo / React Native / APNs convention)
-3. HTTP Header: `X-Push-Token: ...` or `X-FCM-Token: ...`
-
-When passed as an HTTP header during `/api/auth/login`, `/api/auth/register`, or `/api/auth/refresh`, OmniAuth automatically binds the push token to the device record with zero extra API requests!
-:::
 
 ---
 
@@ -697,7 +750,7 @@ Disables Two-Factor Authentication and purges stored TOTP secrets and recovery c
 ## 4. Social Authentication & Token Exchange
 
 ### <span class="badge-method badge-post">POST</span> `/api/auth/social/exchange`
-Exchanges a native mobile ID Token (Google ID Token or Apple Identity JWT) for authentication tokens.
+Exchanges a native mobile ID Token (Google ID Token or Apple Identity JWT) for authentication tokens. Validates signatures using live RS256 JWKS key sets (see [Social Authentication Guide](/laravel-omni-auth/features/social-login/#native-mobile-token-exchange)).
 
 - **Route Name**: `omni.social.exchange`
 - **Authentication**: Public (Mobile ID Token)
@@ -708,6 +761,32 @@ Exchanges a native mobile ID Token (Google ID Token or Apple Identity JWT) for a
 | `provider` | `string` | Yes | Social provider (`google` or `apple`) | `"apple"` |
 | `id_token` | `string` | Yes | Cryptographic token (also accepts `token`) | `"eyJhbGciOiJSUzI1NiIs..."` |
 | `name` | `string` | No | Optional display name (Apple initial authorization) | `"Jane Doe"` |
+
+#### Request Payloads
+
+<Tabs>
+  <TabItem label="Apple Sign-In (iOS / Flutter)">
+
+```json
+{
+  "provider": "apple",
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkFJQVRPS0VOIi...",
+  "name": "Jane Doe"
+}
+```
+
+  </TabItem>
+  <TabItem label="Google Sign-In (Android / Flutter)">
+
+```json
+{
+  "provider": "google",
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFkMmUzZjQi..."
+}
+```
+
+  </TabItem>
+</Tabs>
 
 #### Success Response: 200 OK
 ```json
@@ -886,7 +965,7 @@ Updates the password using the reset token and revokes all active sessions.
 ## 6. Passwordless Magic Links
 
 ### <span class="badge-method badge-post">POST</span> `/api/auth/magic-link`
-Generates a cryptographically signed magic login link and sends it via email.
+Generates a cryptographically signed magic login link and sends it via email. See the [Passwordless Magic Links Guide](/laravel-omni-auth/features/magic-links/) for full security rules and production localhost redirect restrictions.
 
 - **Route Name**: `omni.magic.send`
 - **Authentication**: Public (None)
@@ -895,7 +974,7 @@ Generates a cryptographically signed magic login link and sends it via email.
 | Field | Type | Required | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
 | `email` | `string` | Yes | Registered email address | `"jane@example.com"` |
-| `redirect_url` | `string` | No | Whitelisted domain redirect target | `"https://app.example.com/callback"` |
+| `redirect_url` | `string` | No | Whitelisted domain redirect target (see [Magic Links Guide](/laravel-omni-auth/features/magic-links/)) | `"https://app.example.com/callback"` |
 
 #### Success Response: 200 OK
 ```json
@@ -918,7 +997,11 @@ Verifies magic link token and authenticates the session.
 | :--- | :--- | :--- | :--- | :--- |
 | `token` | `string` | Yes | Single-use magic token (query param or POST body) | `"9f8e7d6c5b4a3..."` |
 
-#### Success Response: 200 OK
+#### Success Responses
+
+<Tabs>
+  <TabItem label="Standard Account">
+
 ```json
 {
   "ok": true,
@@ -935,6 +1018,26 @@ Verifies magic link token and authenticates the session.
   }
 }
 ```
+
+  </TabItem>
+  <TabItem label="Account with 2FA Enabled">
+
+If the user has TOTP Two-Factor Authentication active, OmniAuth returns a challenge token requiring resolution via [POST /api/auth/2fa/challenge](#post-apiauth2fachallenge):
+
+```json
+{
+  "ok": true,
+  "message": "Two-factor authentication is required.",
+  "data": {
+    "requires_2fa": true,
+    "two_factor_token": "2fa_ch_9a8b7c6d5e4f3a2b1...",
+    "expires_in": 300
+  }
+}
+```
+
+  </TabItem>
+</Tabs>
 
 ---
 
@@ -994,15 +1097,33 @@ Dispatches a new email verification code/link to the authenticated user.
 ---
 
 ### <span class="badge-method badge-delete">DELETE</span> `/api/auth/account`
-Permanently deletes the authenticated user account and executes cascading cleanup of devices, tokens, and 2FA credentials.
+Permanently deletes the authenticated user account and executes cascading cleanup of devices, tokens, and 2FA credentials. Complies with GDPR and Apple App Store Guideline 5.1.1(v) (see [Account Deletion Guide](/laravel-omni-auth/features/verification-and-deletion/#self-service-account-deletion-gdpr--apple-app-store)).
 
 - **Route Name**: `omni.account.delete`
 - **Authentication**: Required (`omni.auth`) + Password Confirmation (Optional for social-only users)
 
-#### Request Parameters
-| Field | Type | Required | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `password` | `string` | Yes* | User's password (*not required for social-only accounts) | `"Secret123!"` |
+#### Request Payloads
+
+<Tabs>
+  <TabItem label="Password-Based Account">
+For accounts registered with email and password, confirming the current password is required:
+
+```json
+{
+  "password": "UserCurrentPassword123!"
+}
+```
+
+  </TabItem>
+  <TabItem label="Social-Only Account (Google / Apple)">
+Accounts registered exclusively through OAuth providers that have no local password hash (`password === null`) can be deleted with an empty body:
+
+```json
+{}
+```
+
+  </TabItem>
+</Tabs>
 
 #### Success Response: 200 OK
 ```json
