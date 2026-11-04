@@ -128,7 +128,7 @@ export async function loginUser(email: string, password: string) {
 
 ```typescript
 export async function verify2FA(challengeToken: string, code: string) {
-  const response = await api.post('/api/auth/2fa/verify', {
+  const response = await api.post('/api/auth/2fa/challenge', {
     challenge_token: challengeToken,
     code,
   });

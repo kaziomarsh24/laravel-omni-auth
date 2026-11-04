@@ -12,12 +12,12 @@ Passwordless login eliminates passwords entirely by emailing the user a cryptogr
 ```text
 User                      App Client                       OmniAuth Backend
  |                            |                                   |
- |-- Enters email ----------->|-- POST /api/auth/magic-link/send->| Generates random token
+ |-- Enters email ----------->|-- POST /api/auth/magic-link ----->| Generates random token
  |                            |   { "email": "..." }              | Hashes token (SHA-256)
  |                            |                                   | Dispatches email
  |                            |<-- { "message": "Link sent" } ----|
  |                                                                |
- |-- Checks Email & Clicks link --------------------------------->| GET /api/auth/magic-link/verify/{tok}
+ |-- Checks Email & Clicks link --------------------------------->| GET /api/auth/magic-link/verify?token=...
  |                                                                | Validates expiration & hash
  |                                                                | Marks token as consumed
  |                                                                | Checks 2FA status
@@ -33,7 +33,7 @@ User                      App Client                       OmniAuth Backend
 Generates a single-use token and dispatches an email containing the signed login link:
 
 ```http
-POST /api/auth/magic-link/send
+POST /api/auth/magic-link
 Content-Type: application/json
 
 {
@@ -60,7 +60,7 @@ The `redirect_url` parameter is strictly validated against `config('app.url')` a
 When the user clicks the link in their email:
 
 ```http
-GET /api/auth/magic-link/verify/9f8e7d6c5b4a3...
+GET /api/auth/magic-link/verify?token=9f8e7d6c5b4a3...
 Accept: application/json
 ```
 

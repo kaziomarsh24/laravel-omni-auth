@@ -107,7 +107,7 @@ import * as Notifications from 'expo-notifications';
 
 export async function syncPushToken() {
   const token = (await Notifications.getExpoPushTokenAsync()).data;
-  await api.post('/api/auth/devices/fcm-token', {
+  await api.post('/api/auth/devices/fcm', {
     fcm_token: token,
   });
 }

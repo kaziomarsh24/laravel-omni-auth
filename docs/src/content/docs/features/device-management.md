@@ -91,7 +91,7 @@ When a device is revoked:
 Logs out every session across all browsers and devices except the one currently making the request:
 
 ```http
-DELETE /api/auth/devices/others
+POST /api/auth/devices/logout-others
 Authorization: Bearer <access_token>
 ```
 
@@ -110,7 +110,7 @@ Response:
 Mobile clients can synchronize their device push tokens without re-authenticating:
 
 ```http
-POST /api/auth/devices/fcm-token
+POST /api/auth/devices/fcm
 Authorization: Bearer <access_token>
 Content-Type: application/json
 

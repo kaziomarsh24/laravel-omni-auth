@@ -87,9 +87,9 @@ Because the refresh token record is deleted in the database, any future attempt 
 To prevent database bloat from expired Sanctum tokens and abandoned device records, OmniAuth provides the `omni:prune-tokens` Artisan command:
 
 ```bash
-php artisan omni:prune-tokens --days=30
+php artisan omni:prune-tokens --hours=24
 ```
 
 This command executes two cleanup tasks:
-1. Deletes all `personal_access_tokens` whose `expires_at` timestamp has passed.
-2. Deletes all `auth_devices` records that have been inactive (`last_active_at`) for more than the specified number of days (default: 30 days).
+1. Deletes all `personal_access_tokens` whose `expires_at` timestamp is beyond the specified hours (default: 24 hours).
+2. Deletes all stale `auth_devices` records older than 90 days with no active tokens.

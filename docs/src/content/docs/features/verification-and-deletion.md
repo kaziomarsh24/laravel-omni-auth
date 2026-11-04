@@ -30,7 +30,7 @@ Accept: application/json
 Mobile applications often present a 6-digit PIN screen rather than directing users through external browser links:
 
 ```http
-POST /api/auth/email/verify-otp
+POST /api/auth/email/verify
 Authorization: Bearer <access_token>
 Content-Type: application/json
 

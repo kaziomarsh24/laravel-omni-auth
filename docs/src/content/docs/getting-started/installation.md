@@ -117,14 +117,14 @@ In Laravel 11/12, register the pruning command in `routes/console.php`:
 ```php
 use Illuminate\Support\Facades\Schedule;
 
-// Prune expired tokens and inactive devices older than 30 days
-Schedule::command('omni:prune-tokens --days=30')->daily();
+// Prune expired tokens and inactive devices
+Schedule::command('omni:prune-tokens --hours=24')->daily();
 ```
 
 You can also run the command manually:
 
 ```bash
-php artisan omni:prune-tokens --days=30
+php artisan omni:prune-tokens --hours=24
 ```
 
 ---

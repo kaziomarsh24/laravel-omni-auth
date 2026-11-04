@@ -89,10 +89,10 @@ When a user with 2FA enabled logs in via credentials, social exchange, or magic 
 }
 ```
 
-The client then prompts the user for their 6-digit code and calls the verification endpoint:
+The client then prompts the user for their 6-digit code and calls the challenge resolution endpoint:
 
 ```http
-POST /api/auth/2fa/verify
+POST /api/auth/2fa/challenge
 Content-Type: application/json
 
 {
