@@ -13,21 +13,21 @@ OmniAuth was developed directly out of these recurring production vulnerabilitie
 
 The table below provides an objective, side-by-side technical comparison between standard Laravel authentication tools and Laravel OmniAuth when building multi-client (Web + Mobile) applications:
 
-| Feature / Security Defense | Laravel Breeze | Laravel Fortify | Raw Laravel Sanctum | Laravel OmniAuth |
+| Feature / Capability | Breeze | Fortify | Sanctum | OmniAuth |
 | :--- | :---: | :---: | :---: | :---: |
-| **Package Architecture** | Starter Kit *(Code Scaffolding)* | Headless Backend | Auth / Transport Driver | Turnkey Modular Package |
-| **Dual-Mode Delivery**<br><small>Seamless Web HttpOnly Cookies + Mobile Bearer on same API</small> | ❌ | ❌ | ❌ *(Requires manual boilerplate)* | ✅ **Built-in** |
-| **Single-Use Refresh Token Rotation**<br><small>With automatic breach detection & cascade revocation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Refresh Token Boundary Guard**<br><small>Prevents refresh tokens from authenticating standard API routes</small> | ❌ | ❌ | ❌ | ✅ **Framework Guard Hook** |
-| **Multi-Device Session Auditing**<br><small>IP, User-Agent, device name, and individual device revocation</small> | ❌ | ⚠️ *(Session table only)* | ❌ *(Token name string only)* | ✅ **Dedicated Device API** |
-| **Push Notification (FCM) Token Binding**<br><small>Stores and syncs active FCM tokens per device session</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Native Mobile Social Auth**<br><small>Apple & Google RS256 JWKS asymmetric token verification</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Social Account Pre-Hijacking Defense**<br><small>Invalidates unverified local password on OAuth email link</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Constant-Time Timing Attack Defense**<br><small>Dummy bcrypt comparison on non-existent users</small> | ❌ | ❌ | ❌ | ✅ **Built-in (~235ms vs ~259ms)** |
-| **Headless 2FA Challenge Protocol**<br><small>RFC 6238 TOTP + recovery codes with token withholding</small> | ❌ | ⚠️ *(Web session only)* | ❌ | ✅ **Headless Token Protocol** |
-| **Passwordless Magic Login Links**<br><small>Single-use signed links with RFC-compliant host validation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Ready-to-Use Production Endpoints**<br><small>Zero-boilerplate turnkey authentication routes</small> | ❌ *(Publishes code to app/)* | ⚠️ *(Action classes only)* | ❌ *(Token issuing only)* | ✅ **29 Production Endpoints** |
-| **Pre-Configured Postman & Bruno Tooling**<br><small>With automated token chaining & environment variables</small> | ❌ | ❌ | ❌ | ✅ **Included** |
+| **Package Architecture** | Starter Kit<br><small>Code Scaffolding</small> | Headless Backend<br><small>Action Classes</small> | Driver / Transport<br><small>Token Issuance</small> | **Turnkey Package**<br><small>Modular & Configurable</small> |
+| **Dual-Mode Delivery**<br><small>Web Cookie + Mobile Bearer on same API</small> | ❌ | ❌ | ❌<br><small>Requires boilerplate</small> | ✅ **Built-in** |
+| **Refresh Token Rotation**<br><small>Single-use + breach detection & cascade revocation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Refresh Boundary Guard**<br><small>Blocks refresh tokens on standard API endpoints</small> | ❌ | ❌ | ❌ | ✅ **Framework Guard** |
+| **Multi-Device Auditing**<br><small>IP, User-Agent, device name, and single device revocation</small> | ❌ | ⚠️<br><small>Session table only</small> | ❌<br><small>Token name string only</small> | ✅ **Dedicated Device API** |
+| **Push Token (FCM) Binding**<br><small>Stores and syncs active FCM tokens per device session</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Native Social Auth**<br><small>Apple & Google RS256 JWKS asymmetric token verification</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Pre-Hijacking Defense**<br><small>Invalidates unverified local password on OAuth email link</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Timing Attack Shield**<br><small>Dummy bcrypt comparison on non-existent users</small> | ❌ | ❌ | ❌ | ✅ **Built-in**<br><small>~235ms vs ~259ms</small> |
+| **Headless 2FA Protocol**<br><small>RFC 6238 TOTP + recovery codes with token withholding</small> | ❌ | ⚠️<br><small>Web session only</small> | ❌ | ✅ **Headless Protocol** |
+| **Magic Login Links**<br><small>Single-use signed links with RFC-compliant host validation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Production Endpoints**<br><small>Zero-boilerplate turnkey authentication routes</small> | ❌<br><small>Publishes code to app/</small> | ⚠️<br><small>Action classes only</small> | ❌<br><small>Token driver only</small> | ✅ **29 Production Endpoints** |
+| **Postman & Bruno Tooling**<br><small>With automated token chaining & environment variables</small> | ❌ | ❌ | ❌ | ✅ **Included** |
 
 ---
 
