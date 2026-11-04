@@ -293,3 +293,102 @@ The `Omni` facade provides static access to all authentication sub-managers:
 | `Omni::twoFactor()` | `TwoFactorManager` | Direct access to TOTP generation, clock drift verification, and recovery codes. |
 | `Omni::social()` | `SocialAuthManager` | Direct access to OAuth redirect generation and mobile token validation. |
 | `Omni::passwordReset()` | `PasswordResetManager` | Direct access to cryptographic OTP hashing and password strength verification. |
+
+### Practical Facade Examples
+
+The table below demonstrates the 5 most common headless workflows you can copy-paste directly into your custom controllers:
+
+#### 1. One-Line Headless Login
+Authenticate credentials directly with full rate-limiting and dual-mode cookie/token delivery:
+
+```php
+use Illuminate\Http\Request;
+use KaziOmar\OmniAuth\Facades\Omni;
+
+public function login(Request $request)
+{
+    // Verifies credentials, guards against brute-force attacks, and delivers tokens
+    return Omni::attempt($request->only('email', 'password'), $request);
+}
+```
+
+#### 2. Custom Business Logic & Manual Token Issuance
+Execute enterprise domain checks (e.g. account suspension, organization tenancy, billing) before issuing tokens:
+
+```php
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use KaziOmar\OmniAuth\Facades\Omni;
+
+public function customAuthenticate(Request $request)
+{
+    $user = User::where('email', $request->email)->firstOrFail();
+
+    if (! Hash::check($request->password, $user->password)) {
+        return response()->json(['message' => 'Invalid credentials.'], 401);
+    }
+
+    // Custom Domain Check: Account Suspension
+    if ($user->is_suspended) {
+        return response()->json(['message' => 'Account is suspended.'], 403);
+    }
+
+    // Deliver dual-mode tokens (SameSite HttpOnly cookies for Web, Bearer for Mobile)
+    return Omni::issueTokenResponse(
+        $user, 
+        $request, 
+        message: 'Welcome back!', 
+        status: 200
+    );
+}
+```
+
+#### 3. Client Environment Detection
+Branch logic conditionally based on whether the caller is a mobile app (Flutter / React Native) or a Web SPA:
+
+```php
+use Illuminate\Http\Request;
+use KaziOmar\OmniAuth\Facades\Omni;
+
+public function handleClientRedirect(Request $request)
+{
+    if (Omni::isMobile($request)) {
+        // Return deep-link URI scheme for mobile clients (e.g., myapp://auth/callback)
+        return response()->json(['redirect' => 'myapp://auth/callback']);
+    }
+
+    // Fallback for Web SPA clients
+    return response()->json(['redirect' => config('app.frontend_url') . '/dashboard']);
+}
+```
+
+#### 4. Session Revocation (Current Device vs. All Devices)
+Single-device sign-out vs. global security kill-switch:
+
+```php
+use Illuminate\Http\Request;
+use KaziOmar\OmniAuth\Facades\Omni;
+
+// Sign out current device only (clears HttpOnly cookie & purges Sanctum token)
+return Omni::logout($request);
+
+// Global Security Sign-Out: Revoke all tokens across all active phones, laptops, and tablets
+return Omni::logout($request, allDevices: true);
+```
+
+#### 5. Direct Sub-Manager Invocation
+Directly query TOTP 2FA status or inspect user devices without going through HTTP endpoints:
+
+```php
+use KaziOmar\OmniAuth\Facades\Omni;
+
+// Check if user has confirmed TOTP two-factor authentication
+$is2faActive = Omni::twoFactor()->isEnabled($user);
+
+// Inspect all active tracked devices for the user
+$devices = Omni::devices()->all($user);
+
+// Rotate sliding refresh token manually in custom controller
+return Omni::refresh($request);
+```
