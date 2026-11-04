@@ -24,7 +24,7 @@ Whenever an authentication event occurs (login, registration, social exchange, o
 
 ### 1. List Active Devices
 
-Retrieve all devices currently authenticated to the user's account:
+Retrieve all devices currently authenticated to the user's account (see [`GET /api/auth/devices`](/laravel-omni-auth/reference/api-reference/#get-apiauthdevices)):
 
 ```http
 GET /api/auth/devices
@@ -68,7 +68,7 @@ The `is_current` boolean indicates whether that entry matches the token or devic
 
 ### 2. Revoke a Specific Device
 
-Revokes a remote device session by ID:
+Revokes a remote device session by ID (see [`DELETE /api/auth/devices/{id}`](/laravel-omni-auth/reference/api-reference/#delete-apiauthdevicesid)):
 
 ```http
 DELETE /api/auth/devices/2
@@ -92,7 +92,7 @@ When a device is revoked:
 
 ### 3. Revoke All Other Devices
 
-Logs out every session across all browsers and devices except the one currently making the request:
+Logs out every session across all browsers and devices except the one currently making the request (see [`POST /api/auth/devices/logout-others`](/laravel-omni-auth/reference/api-reference/#post-apiauthdeviceslogout-others)):
 
 ```http
 POST /api/auth/devices/logout-others
@@ -114,7 +114,7 @@ Response:
 
 ### 4. Update Push Notification Token (FCM / APNS / Expo)
 
-Mobile clients can synchronize their device push tokens without re-authenticating. OmniAuth accepts push tokens via multiple formats to support Firebase Cloud Messaging, Apple APNs, and Expo Push:
+Mobile clients can synchronize their device push tokens without re-authenticating (see [`POST /api/auth/devices/fcm`](/laravel-omni-auth/reference/api-reference/#post-apiauthdevicesfcm)). OmniAuth accepts push tokens via multiple formats to support Firebase Cloud Messaging, Apple APNs, and Expo Push:
 
 <Tabs>
   <TabItem label="Firebase FCM Payload">

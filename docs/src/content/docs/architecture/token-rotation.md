@@ -43,7 +43,7 @@ sequenceDiagram
 ```
 
 ### Single-Use Refresh Tokens
-Refresh tokens are strictly single-use. When `/api/auth/refresh` is called:
+Refresh tokens are strictly single-use. When [`POST /api/auth/refresh`](/laravel-omni-auth/reference/api-reference/#post-apiauthrefresh) is called:
 - OmniAuth validates the provided refresh token.
 - The existing refresh token is immediately deleted from the database.
 - A new access token and a new sliding refresh token are generated.
@@ -64,13 +64,13 @@ Every authenticated session is tracked in the `auth_devices` database table:
 | `device_name` | Human-readable label (e.g., "iPhone 15 Pro", "Chrome on macOS") |
 | `browser` | Detected browser engine or app bundle |
 | `ip_address` | Client IP address at time of authentication |
-| `fcm_token` | Optional Firebase Cloud Messaging push token for push notifications |
+| `fcm_token` | Optional Firebase Cloud Messaging push token (see [Universal Push Tokens](/laravel-omni-auth/features/device-management/#4-update-push-notification-token-fcm--apns--expo)) |
 | `refresh_token_id` | Foreign key linking this device to its active refresh token |
 | `last_active_at` | Timestamp of the most recent API activity |
 
 ### Device Revocation
 
-When a user views their active sessions via `GET /api/auth/devices`, they can revoke any device by ID (`DELETE /api/auth/devices/{id}`):
+When a user views their active sessions via [`GET /api/auth/devices`](/laravel-omni-auth/reference/api-reference/#get-apiauthdevices), they can revoke any device by ID ([`DELETE /api/auth/devices/{id}`](/laravel-omni-auth/reference/api-reference/#delete-apiauthdevicesid)):
 
 ```php
 // Inside DeviceManager::revoke()

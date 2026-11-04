@@ -35,7 +35,7 @@ sequenceDiagram
 
 ### 1. Request a Magic Link
 
-Generates a single-use token and dispatches an email containing the signed login link:
+Generates a single-use token and dispatches an email containing the signed login link (see [`POST /api/auth/magic-link`](/laravel-omni-auth/reference/api-reference/#post-apiauthmagic-link)):
 
 ```http
 POST /api/auth/magic-link
@@ -68,7 +68,7 @@ In local development (`APP_ENV=local`), localhost URLs like `http://localhost:30
 
 ### 2. Verify Magic Link
 
-When the user clicks the link in their email:
+When the user clicks the link in their email (see [`GET|POST /api/auth/magic-link/verify`](/laravel-omni-auth/reference/api-reference/#getpost-apiauthmagic-linkverify)):
 
 ```http
 GET /api/auth/magic-link/verify?token=9f8e7d6c5b4a3...
@@ -118,4 +118,4 @@ Response (If Account Has 2FA Enabled):
 }
 ```
 
-Even when logging in via magic link, users with 2FA enabled must provide a valid TOTP code before access is granted.
+Even when logging in via magic link, users with 2FA enabled must resolve the challenge token via [`POST /api/auth/2fa/challenge`](/laravel-omni-auth/reference/api-reference/#post-apiauth2fachallenge) with a valid TOTP code before access tokens or session cookies are issued.

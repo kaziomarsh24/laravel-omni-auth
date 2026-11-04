@@ -13,7 +13,7 @@ OmniAuth handles both flows seamlessly.
 
 ## Web OAuth 2.0 Flow
 
-Supported providers: `google`, `apple`, `github`, `facebook`.
+Supported providers: `google`, `apple`, `github`, `facebook`. Initiated via [`GET /api/auth/social/{provider}/redirect`](/laravel-omni-auth/reference/api-reference/#get-apiauthsocialproviderredirect) and completed at [`GET|POST /api/auth/social/{provider}/callback`](/laravel-omni-auth/reference/api-reference/#getpost-apiauthsocialprovidercallback).
 
 ```mermaid
 sequenceDiagram
@@ -47,7 +47,7 @@ OmniAuth enforces CSRF state parameter validation on all OAuth callbacks. If an 
 
 Native mobile apps should never open an external browser window for OAuth redirects if a native biometric or system prompt is available.
 
-Using the mobile SDK, the native app retrieves a cryptographically signed identity token (`id_token`) directly from Google or Apple, then submits it to the exchange endpoint:
+Using the mobile SDK, the native app retrieves a cryptographically signed identity token (`id_token`) directly from Google or Apple, then submits it to the exchange endpoint ([`POST /api/auth/social/exchange`](/laravel-omni-auth/reference/api-reference/#post-apiauthsocialexchange)):
 
 ```http
 POST /api/auth/social/exchange
@@ -132,7 +132,7 @@ Apple generates identity tokens with different audience (`aud`) values depending
 - **Web Browser OAuth:** The audience is your Apple **Services ID** (e.g. `com.company.web`).
 - **Native iOS / Flutter App:** The audience is your Apple **App Bundle ID** (e.g. `com.company.app`).
 
-In `config/omni-auth.php`, configure your Apple client settings accordingly, or set your iOS Bundle ID so that tokens exchanged via `/api/auth/social/exchange` pass cryptographic audience verification without triggering `400 Invalid Token Audience`.
+In `config/omni-auth.php`, configure your Apple client settings accordingly, or set your iOS Bundle ID so that tokens exchanged via [`POST /api/auth/social/exchange`](/laravel-omni-auth/reference/api-reference/#post-apiauthsocialexchange) pass cryptographic audience verification without triggering `400 Invalid Token Audience`.
 :::
 
 When verifying Apple identity tokens:

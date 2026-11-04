@@ -46,7 +46,8 @@ sequenceDiagram
 ```
 
 ### 1. Initiate Setup
-The user must provide their current password to begin setup:
+
+The user must provide their current password to begin setup (see [`POST /api/auth/2fa/setup`](/laravel-omni-auth/reference/api-reference/#post-apiauth2fasetup)):
 
 ```http
 POST /api/auth/2fa/setup
@@ -77,7 +78,8 @@ Response:
 ```
 
 ### 2. Confirm Setup
-The user enters the 6-digit code shown in their authenticator app to verify that setup was successful:
+
+The user enters the 6-digit code shown in their authenticator app to verify that setup was successful (see [`POST /api/auth/2fa/confirm`](/laravel-omni-auth/reference/api-reference/#post-apiauth2faconfirm)):
 
 ```http
 POST /api/auth/2fa/confirm
@@ -115,7 +117,7 @@ When a user with 2FA enabled logs in via credentials, social exchange, or magic 
 }
 ```
 
-The client then prompts the user for their 6-digit code and calls the challenge resolution endpoint (accepts `two_factor_token` or `challenge_token`):
+The client then prompts the user for their 6-digit code and calls the challenge resolution endpoint [`POST /api/auth/2fa/challenge`](/laravel-omni-auth/reference/api-reference/#post-apiauth2fachallenge) (accepts `two_factor_token` or `challenge_token`):
 
 ```http
 POST /api/auth/2fa/challenge
@@ -141,7 +143,7 @@ If the user loses access to their authenticator app, they can pass any of their 
 ## Management Endpoints
 
 ### Regenerating Recovery Codes
-Requires password confirmation. Returns eight fresh codes and invalidates all prior recovery codes:
+Requires password confirmation. Returns eight fresh codes and invalidates all prior recovery codes (see [`POST /api/auth/2fa/recovery-codes`](/laravel-omni-auth/reference/api-reference/#post-apiauth2farecovery-codes)):
 
 ```http
 POST /api/auth/2fa/recovery-codes
@@ -154,7 +156,7 @@ Content-Type: application/json
 ```
 
 ### Disabling 2FA
-Requires password confirmation. Wipes the TOTP secret and recovery codes:
+Requires password confirmation. Wipes the TOTP secret and recovery codes (see [`POST /api/auth/2fa/disable`](/laravel-omni-auth/reference/api-reference/#post-apiauth2fadisable)):
 
 ```http
 POST /api/auth/2fa/disable
