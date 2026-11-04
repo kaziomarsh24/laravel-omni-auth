@@ -16,6 +16,27 @@ export default defineConfig({
 						src: '/laravel-omni-auth/mermaid-init.js',
 					},
 				},
+				{
+					tag: 'meta',
+					attrs: {
+						property: 'og:image',
+						content: 'https://kaziomarsh24.github.io/laravel-omni-auth/og-image.png',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
+						name: 'twitter:image',
+						content: 'https://kaziomarsh24.github.io/laravel-omni-auth/og-image.png',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
+						name: 'twitter:card',
+						content: 'summary_large_image',
+					},
+				},
 			],
 			title: 'Laravel OmniAuth',
 			logo: {
