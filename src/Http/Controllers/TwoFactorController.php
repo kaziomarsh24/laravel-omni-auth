@@ -5,6 +5,7 @@ namespace KaziOmar\OmniAuth\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use KaziOmar\OmniAuth\Facades\Omni;
 use KaziOmar\OmniAuth\Features;
 
@@ -39,17 +40,35 @@ class TwoFactorController extends Controller
             'code' => 'required|string',
         ]);
 
+        $token = $request->input('two_factor_token');
+        $throttleKey = 'omni_2fa_challenge_attempts:' . hash('sha256', $token);
+        $attempts = (int) Cache::get($throttleKey, 0);
+
+        if ($attempts >= 5) {
+            Cache::forget('omni_2fa_challenge:' . hash('sha256', $token));
+            Cache::forget($throttleKey);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Too many invalid two-factor verification attempts. Challenge expired. Please log in again.',
+            ], 422);
+        }
+
         $user = Omni::twoFactor()->verifyChallenge(
-            $request->input('two_factor_token'),
+            $token,
             $request->input('code')
         );
 
         if (!$user) {
+            Cache::put($throttleKey, $attempts + 1, now()->addMinutes(10));
+
             return response()->json([
                 'ok' => false,
                 'message' => 'Invalid or expired two-factor code.',
             ], 422);
         }
+
+        Cache::forget($throttleKey);
 
         return Omni::issueTokenResponse($user, $request, 'Two-factor authentication successful.');
     }

@@ -85,6 +85,12 @@ class PasswordResetController extends Controller
                     'reset_token' => $resetToken,
                 ],
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
         } catch (Exception $e) {
             return response()->json([
                 'ok' => false,
@@ -117,6 +123,12 @@ class PasswordResetController extends Controller
                 'ok' => true,
                 'message' => 'Your password has been reset successfully. All active sessions have been terminated.',
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
         } catch (Exception $e) {
             return response()->json([
                 'ok' => false,

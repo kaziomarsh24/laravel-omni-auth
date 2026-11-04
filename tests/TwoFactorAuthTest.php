@@ -309,4 +309,36 @@ class TwoFactorAuthTest extends TestCase
             }
         );
     }
+
+    public function test_two_factor_challenge_brute_force_lockout(): void
+    {
+        $setup = Omni::twoFactor()->setup($this->user);
+        $validTotp = Omni::twoFactor()->calculateCode($setup['secret']);
+        Omni::twoFactor()->confirm($this->user, $validTotp);
+
+        $loginRes = $this->postJson('/api/auth/login', [
+            'email' => 'twofactor@example.com',
+            'password' => 'Password123!',
+        ]);
+
+        $token = $loginRes->json('data.two_factor_token');
+
+        // Send 5 invalid attempts
+        for ($i = 0; $i < 5; $i++) {
+            $failRes = $this->postJson('/api/auth/2fa/challenge', [
+                'two_factor_token' => $token,
+                'code' => '000000',
+            ]);
+            $failRes->assertStatus(422);
+        }
+
+        // 6th attempt with CORRECT code should now be completely rejected because challenge is destroyed
+        $blockedRes = $this->postJson('/api/auth/2fa/challenge', [
+            'two_factor_token' => $token,
+            'code' => Omni::twoFactor()->calculateCode($setup['secret']),
+        ]);
+
+        $blockedRes->assertStatus(422)
+            ->assertJsonPath('message', 'Too many invalid two-factor verification attempts. Challenge expired. Please log in again.');
+    }
 }

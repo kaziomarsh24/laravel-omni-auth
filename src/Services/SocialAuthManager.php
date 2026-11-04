@@ -370,6 +370,12 @@ class SocialAuthManager
 
         event(new \Illuminate\Auth\Events\Registered($newUser));
 
+        // Auto-assign default role if configured and Spatie Permission exists
+        $defaultRole = config('omni-auth.registration.default_role');
+        if ($defaultRole && method_exists($newUser, 'assignRole')) {
+            $newUser->assignRole($defaultRole);
+        }
+
         return $newUser;
     }
 

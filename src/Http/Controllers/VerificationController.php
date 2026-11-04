@@ -136,6 +136,12 @@ class VerificationController extends Controller
                 'ok' => true,
                 'message' => 'Your account has been deleted permanently along with all active sessions.',
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
         } catch (Exception $e) {
             return response()->json([
                 'ok' => false,
