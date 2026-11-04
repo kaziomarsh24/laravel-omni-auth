@@ -37,9 +37,13 @@
 /* --------------------------------------------------------------------------
    Logo & Asset Sizing Constraints
    -------------------------------------------------------------------------- */
-img, svg {
+img {
   max-width: 100%;
   height: auto;
+}
+
+svg {
+  max-width: 100%;
 }
 
 header a.site-title img,
@@ -285,7 +289,8 @@ header {
 .card {
   border-radius: 16px !important;
   padding: 1.75rem !important;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease !important;
+  will-change: transform;
 }
 
 :root[data-theme='dark'] .card {
@@ -313,12 +318,24 @@ header {
   box-shadow: 0 14px 28px -6px rgba(225, 29, 72, 0.15) !important;
 }
 
+/* Stagger fallback defense: prevent jump loop if stagger is active */
+.card-grid.stagger > .card:nth-child(2n) {
+  transform: translateY(var(--stagger-height, 5rem)) !important;
+}
+
+.card-grid.stagger > .card:nth-child(2n):hover {
+  transform: translateY(calc(var(--stagger-height, 5rem) - 4px)) !important;
+}
+
 .card .title {
-  font-size: 1.15rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.85rem !important;
+  font-size: 1.18rem !important;
   font-weight: 700 !important;
   letter-spacing: -0.015em !important;
-  margin-top: 0.75rem !important;
-  margin-bottom: 0.5rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 0.75rem !important;
 }
 
 :root[data-theme='dark'] .card .title {
@@ -338,12 +355,37 @@ header {
 }
 
 .card .icon {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+  padding: 0.45rem !important;
+  box-sizing: border-box !important;
   background: rgba(244, 63, 94, 0.12) !important;
-  color: #f43f5e !important;
-  border: 1px solid rgba(244, 63, 94, 0.25) !important;
-  border-radius: 12px !important;
-  padding: 8px !important;
+  color: #fb7185 !important;
+  border: 1px solid rgba(244, 63, 94, 0.3) !important;
+  border-radius: 10px !important;
+  flex-shrink: 0 !important;
   display: inline-flex !important;
+  transition: all 0.2s ease !important;
+}
+
+.card:hover .icon {
+  background: rgba(244, 63, 94, 0.22) !important;
+  border-color: rgba(244, 63, 94, 0.5) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='light'] .card .icon {
+  background: rgba(225, 29, 72, 0.08) !important;
+  color: #e11d48 !important;
+  border: 1px solid rgba(225, 29, 72, 0.22) !important;
+}
+
+:root[data-theme='light'] .card:hover .icon {
+  background: rgba(225, 29, 72, 0.15) !important;
+  border-color: #e11d48 !important;
+  color: #be123c !important;
 }
 
 /* --------------------------------------------------------------------------
