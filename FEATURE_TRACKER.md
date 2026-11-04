@@ -89,6 +89,6 @@ Status format:
 ---
 
 ## Module 8: Documentation & Developer Experience
-55. [ ] Astro Starlight documentation portal located in `/docs`.
-56. [ ] Interactive multi-client tabbed guides comparing Next.js Web versus Flutter Mobile implementations.
+55. [x] Astro Starlight documentation portal located in `/docs`.
+56. [x] Interactive multi-client guides comparing Next.js Web versus Flutter Mobile and Expo implementations.
 57. [x] Artisan publishing and maintenance commands (`omni:install`, `omni:prune-tokens`) and GitHub Actions CI workflow.

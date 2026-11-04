@@ -1,101 +1,134 @@
 # Laravel OmniAuth
 
-Developer-first, multi-client authentication engine for Laravel. Seamlessly delivers `HttpOnly` SameSite cookies for Web applications (Next.js, React, Vue) and JSON `Bearer` tokens for Mobile applications (Flutter, React Native) with zero-boilerplate security.
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/thekaziomar/laravel-omni-auth.svg?style=flat-square)](https://packagist.org/packages/thekaziomar/laravel-omni-auth)
+[![GitHub Tests Action Status](https://github.com/kaziomarsh24/laravel-omni-auth/actions/workflows/run-tests.yml/badge.svg)](https://github.com/kaziomarsh24/laravel-omni-auth/actions)
+[![Total Downloads](https://img.shields.io/packagist/dt/thekaziomar/laravel-omni-auth.svg?style=flat-square)](https://packagist.org/packages/thekaziomar/laravel-omni-auth)
+[![License](https://img.shields.io/packagist/l/thekaziomar/laravel-omni-auth.svg?style=flat-square)](LICENSE.md)
+
+Production-grade, battle-tested authentication package for Laravel web and mobile applications.
+
+Delivers hardened `SameSite` `HttpOnly` cookies for Web SPAs (Next.js, Nuxt, React, Vue) and short-lived `Bearer` tokens with sliding refresh tokens for native mobile applications (Flutter, React Native, iOS, Android) from a unified, zero-boilerplate API.
 
 ---
 
-## Architectural Philosophy
+## Why OmniAuth?
 
-In modern full-stack development, backend APIs must serve both web browsers and native mobile applications simultaneously:
-- **Web Browsers (Next.js, React, Vue):** Storing bearer tokens in `localStorage` exposes users to XSS token theft. Web clients require secure, `HttpOnly`, `SameSite` cookies.
-- **Mobile Clients (Flutter, React Native):** Mobile applications prefer stateless `Authorization: Bearer <token>` headers stored securely in device keychains.
+Rolling authentication in Laravel usually starts with Sanctum or Breeze, but production environments serving both web browsers and mobile apps require handling complex attack surfaces:
 
-Laravel OmniAuth detects the incoming client type automatically and delivers the appropriate authentication mechanism without requiring separate controllers or duplicated endpoints.
+- **Dual-Mode Delivery**: Transparently negotiates between HttpOnly cookies with CSRF validation for browsers, and Authorization headers with device keychains for mobile.
+- **Refresh Token Isolation**: Prevents long-lived refresh tokens from accessing standard API routes via framework guard hooks (`Sanctum::authenticateAccessTokensUsing`).
+- **Apple & Google RS256 Validation**: Strictly enforces RS256 JWKS asymmetric signatures on Apple and Google identity tokens, preventing key confusion (`HS256`) and caching failures during outages.
+- **Account Pre-Hijacking Prevention**: Links verified social logins safely; unverified pre-existing passwords are automatically invalidated and prior sessions revoked.
+- **Constant-Time Timing Attack Defense**: Executes pre-computed dummy bcrypt comparisons on non-existent users, keeping timing identical (~235ms vs ~259ms).
+- **29 Production Endpoints**: Turnkey API surface covering credentials, TOTP 2FA, social login, device auditing, magic links, and GDPR account deletion.
+- **Battle-Tested**: 90 automated tests (502 assertions) verified against two rounds of whitebox penetration auditing.
 
 ---
 
-## Features (Modular & Opt-In)
+## Documentation
 
-- **Dual-Mode Delivery:** Automatic `HttpOnly, Secure` cookies for Web and Bearer JSON for Mobile.
-- **Token Rotation:** Single-use refresh token rotation with immediate revocation of compromised tokens.
-- **Unified Middleware:** Single `omni.auth` middleware authenticates requests via cookie or bearer header.
-- **Brute-Force Rate Limiting:** Built-in IP and identifier throttling with HTTP 429 backoff headers.
-- **Standard Laravel Events:** Automatically dispatches `Login`, `Failed`, and `Logout` events for audit logging.
-- **Reverse Proxy Ready:** Dynamic HTTPS detection supporting AWS ALB, Cloudflare, Nginx, and Docker.
+Full documentation, interactive multi-client integration guides, and API specifications are available in the documentation portal:
+
+- **[Documentation Portal](./docs)**
+  - [Overview](./docs/src/content/docs/getting-started/overview.md)
+  - [Why OmniAuth?](./docs/src/content/docs/getting-started/why-omniauth.md)
+  - [Installation & Setup](./docs/src/content/docs/getting-started/installation.md)
+  - [Configuration Guide](./docs/src/content/docs/getting-started/configuration.md)
+  - [Dual-Mode Architecture](./docs/src/content/docs/architecture/dual-mode-tokens.md)
+  - [Security Defenses](./docs/src/content/docs/architecture/security-defenses.md)
+  - [Two-Factor Authentication](./docs/src/content/docs/features/two-factor-auth.md)
+  - [Social Login & Token Exchange](./docs/src/content/docs/features/social-login.md)
+  - [Device Management](./docs/src/content/docs/features/device-management.md)
+  - [Next.js Client Guide](./docs/src/content/docs/clients/nextjs-web.md)
+  - [Flutter Client Guide](./docs/src/content/docs/clients/flutter-mobile.md)
+  - [Complete API Reference (29 Endpoints)](./docs/src/content/docs/reference/api-reference.md)
 
 ---
 
 ## Requirements
 
-- PHP 8.2, 8.3, 8.4, or 8.5
-- Laravel 11, 12, or 13
-- Laravel Sanctum 4.x
-
----
-
-## Installation
-
-```bash
-composer require thekaziomar/laravel-omni-auth
-```
-
-Publish configuration:
-
-```bash
-php artisan vendor:publish --tag="omni-auth-config"
-```
+- **PHP**: 8.2, 8.3, or 8.4
+- **Laravel**: 11.x or 12.x
+- **Laravel Sanctum**: 4.x
 
 ---
 
 ## Quickstart
 
-### 1. Authenticate (Web or Mobile)
+### 1. Install via Composer
 
-In your controller:
+```bash
+composer require thekaziomar/laravel-omni-auth
+```
+
+### 2. Run the Installer
+
+Publishes configuration and database migrations:
+
+```bash
+php artisan omni:install
+```
+
+### 3. Prepare the User Model
+
+Add the `HasApiTokens` and `HasOmniAuth` traits to your `App\Models\User`:
 
 ```php
-use KaziOmar\OmniAuth\Facades\Omni;
-use Illuminate\Http\Request;
+namespace App\Models;
 
-public function login(Request $request)
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use KaziOmar\OmniAuth\Traits\HasOmniAuth;
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
 {
-    return Omni::attempt($request->only('email', 'password'));
+    use HasApiTokens, HasOmniAuth;
 }
 ```
 
-- When requested by a browser, Omni delivers access and refresh tokens inside secure `HttpOnly` cookies.
-- When requested by a mobile app (sending `X-Client-Type: mobile` or native User-Agent), Omni returns tokens in the JSON response body.
+### 4. Schedule Automated Token Pruning
 
-### 2. Protect Routes
+In `routes/console.php`:
 
 ```php
-Route::middleware('omni.auth')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-});
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('omni:prune-tokens --days=30')->daily();
 ```
 
-### 3. Refresh Tokens
+---
 
-```php
-public function refresh(Request $request)
-{
-    return Omni::refresh($request);
-}
+## API Surface Summary
+
+OmniAuth registers 29 production-ready endpoints under `/api/auth`:
+
+| Module | Endpoints |
+| :--- | :--- |
+| **Core Auth** | `POST /login`, `POST /register`, `POST /refresh`, `POST /logout`, `GET /me` |
+| **Device Sessions** | `GET /devices`, `DELETE /devices/{id}`, `POST /devices/logout-others`, `POST /devices/fcm` |
+| **2FA (TOTP)** | `POST /2fa/challenge`, `POST /2fa/fallback-otp`, `POST /2fa/setup`, `POST /2fa/confirm`, `POST /2fa/recovery-codes`, `POST /2fa/disable` |
+| **Social Login** | `POST /social/exchange`, `GET /social/{p}/redirect`, `GET\|POST /social/{p}/callback`, `GET /social/accounts`, `DELETE /social/{p}` |
+| **Password Reset** | `POST /forgot-password`, `POST /verify-reset-otp`, `POST /reset-password` |
+| **Magic Links** | `POST /magic-link`, `GET\|POST /magic-link/verify` |
+| **Lifecycle** | `GET\|POST /email/verify/{id}/{hash}`, `POST /email/verify`, `POST /email/resend`, `DELETE /account` |
+
+---
+
+## Testing
+
+Run the test suite with PHPUnit:
+
+```bash
+composer test
 ```
 
-### 4. Logout
-
-```php
-public function logout(Request $request)
-{
-    return Omni::logout($request);
-}
+```text
+Tests:    90 passed (502 assertions)
+Duration: ~1.9s
 ```
 
 ---
 
 ## License
 
-The MIT License (MIT). Please see [LICENSE.md](LICENSE.md) for more information.
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

@@ -1,0 +1,106 @@
+---
+title: Social Login & Native Token Exchange
+description: Unified OAuth 2.0 redirect flows and native mobile ID token verification for Google and Apple.
+---
+
+Modern multi-platform apps need two distinct social login strategies:
+1. **Web Browsers**: Standard OAuth 2.0 redirect flows with CSRF state verification.
+2. **Mobile Apps**: Native SDK sign-in (e.g., `google_sign_in` or `sign_in_with_apple` in Flutter/React Native) that yields an `id_token` directly on the device, requiring backend verification without redirect hops.
+
+OmniAuth handles both flows seamlessly.
+
+---
+
+## Web OAuth 2.0 Flow
+
+Supported providers: `google`, `apple`, `github`, `facebook`.
+
+```text
+Browser                          Laravel Backend                    Provider (Google/Apple)
+   |                                    |                                      |
+   |-- GET /api/auth/social/google ---->| Generates OAuth state                |
+   |   (redirect endpoint)              |-- Redirects with state & client_id ->|
+   |                                    |                                      |
+   |<-- Redirect to Provider Consent ------------------------------------------|
+   |                                                                           |
+   |-- User Authorizes ------------------------------------------------------->|
+   |                                                                           |
+   |<-- Redirects to callback with ?code=XYZ&state=ABC ------------------------|
+   |                                                                           |
+   |-- GET /api/auth/social/google/callback?code=XYZ&state=ABC --------------->|
+   |                                    | Validates state strictly             |
+   |                                    | Exchanges code for profile           |
+   |                                    | Issues tokens / sets cookies         |
+   |<-- Redirects to app with session --|                                      |
+```
+
+### Strict State Parameter Enforcement
+OmniAuth enforces CSRF state parameter validation on all OAuth callbacks. If an incoming callback lacks a `state` parameter or provides an unrecognized token, OmniAuth aborts with HTTP 400.
+
+---
+
+## Native Mobile Token Exchange
+
+Native mobile apps should never open an external browser window for OAuth redirects if a native biometric or system prompt is available.
+
+Using the mobile SDK, the native app retrieves a cryptographically signed identity token (`id_token`) directly from Google or Apple, then submits it to the exchange endpoint:
+
+```http
+POST /api/auth/social/exchange
+X-Client-Type: mobile
+Content-Type: application/json
+
+{
+  "provider": "apple",
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+}
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "id": 15,
+      "name": "Jane Doe",
+      "email": "jane@privaterelay.appleid.com"
+    },
+    "tokens": {
+      "access_token": "3|a8c9...",
+      "refresh_token": "4|b7d2...",
+      "token_type": "Bearer",
+      "expires_in": 900
+    }
+  }
+}
+```
+
+---
+
+## Apple Sign-In Cryptographic Verification
+
+When verifying Apple identity tokens:
+1. **Header Inspection**: Decodes the JWT header and verifies that `alg` is strictly `RS256`. Tokens specifying `HS256` or `none` are immediately rejected.
+2. **JWKS Fetching**: Apple's JSON Web Key Set (`https://appleid.apple.com/auth/keys`) is retrieved. If the request fails, the cache is bypassed to avoid locking users out.
+3. **Public Key Derivation**: The matching RSA key (`kid`) is assembled from its modulus (`n`) and exponent (`e`) into a standard PKCS#8 / PKIX PEM format.
+4. **Signature Validation**: The token signature is validated against the reconstituted public key using OpenSSL (`OPENSSL_ALGO_SHA256`).
+5. **Audience & Expiration**: Confirms that `aud` matches your configured Apple Client ID (or iOS App Bundle ID) and that `exp` is in the future.
+
+---
+
+## Google Sign-In Verification
+
+When verifying Google identity tokens:
+1. Queries Google's public tokeninfo endpoint or certificates.
+2. Validates that the token's audience (`aud`) matches your configured web `client_id` or any entry in `mobile_client_ids`.
+3. Verifies that the issuer is either `accounts.google.com` or `https://accounts.google.com`.
+4. Confirms that `email_verified` is true.
+
+---
+
+## Account Pre-Hijacking Mitigation
+
+If a user signs in via a social provider with an email that already exists in the database:
+- **If the existing account was already email-verified**: The social identity is linked to the existing user record, preserving account history.
+- **If the existing account was unverified (registered with a password)**: OmniAuth assumes the pre-existing password may have been registered by an attacker. OmniAuth links the verified social provider, purges the existing password with high-entropy cryptographic bytes, revokes all existing tokens, and flushes active sessions.

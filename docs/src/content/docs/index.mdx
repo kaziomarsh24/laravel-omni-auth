@@ -1,0 +1,56 @@
+---
+title: Laravel OmniAuth
+description: Production-grade, dual-mode authentication package for Laravel web and mobile applications.
+template: splash
+hero:
+  tagline: Unified, battle-tested authentication for Web SPAs and Mobile clients. Dual-mode tokens, device tracking, TOTP 2FA, social login, and 29 hardened endpoints out of the box.
+  actions:
+    - text: Getting Started
+      link: /getting-started/overview/
+      icon: right-arrow
+      variant: primary
+    - text: API Reference (29 Endpoints)
+      link: /reference/api-reference/
+      icon: document
+      variant: secondary
+    - text: GitHub Repository
+      link: https://github.com/kaziomarsh24/laravel-omni-auth
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Architectural Highlights
+
+<CardGrid stagger>
+  <Card title="Dual-Mode Token Engine" icon="seti:lock">
+    Native support for two distinct client models from the same endpoints. Web SPAs receive hardened SameSite HttpOnly cookies with CSRF protection; mobile clients receive short-lived Bearer tokens and sliding refresh tokens.
+  </Card>
+  <Card title="Multi-Device Tracking & Revocation" icon="laptop">
+    Every authenticated session records device fingerprint, OS, browser, IP address, and FCM push notification tokens. Users can inspect active devices and revoke suspect sessions remotely.
+  </Card>
+  <Card title="Two-Factor Authentication (TOTP)" icon="approve-check">
+    RFC 6238 compliant time-based one-time passwords with encrypted secrets at rest, cryptographically hashed recovery codes, and brute-force lockouts.
+  </Card>
+  <Card title="Unified Social Authentication" icon="puzzle">
+    Supports traditional OAuth 2.0 redirect flows for web browsers alongside direct native ID token verification for Google and Apple (with live RS256 JWKS validation and strict cache management).
+  </Card>
+  <Card title="Account Pre-Hijacking Defense" icon="shield">
+    Protects user accounts against unverified credential takeover. Pre-existing unverified password registrations linked via verified social providers automatically invalidate prior passwords and revoke stale sessions.
+  </Card>
+  <Card title="29 Ready-to-Use Endpoints" icon="list-format">
+    Complete authentication surface covering registration, credential login, passwordless magic links, OTP password resets, device auditing, 2FA management, email verification, and self-service account deletion.
+  </Card>
+</CardGrid>
+
+## Verified Test Coverage
+
+```text
+Tests:    90 passed (502 assertions)
+Duration: ~1.9s
+Coverage: Core Auth, Token Rotation, CSRF, TOTP 2FA, Social Exchange, 
+          Apple RS256 JWKS, Device Revocation, Rate Limiting, Audit Regressions
+```
+
+OmniAuth is tested against two consecutive rounds of whitebox penetration auditing, verifying resistance to timing attacks, token confusion (HS256 vs RS256), Origin header spoofing, and mass-assignment privilege escalation.
