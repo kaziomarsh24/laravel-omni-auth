@@ -27,21 +27,21 @@ Rolling authentication in Laravel usually starts with Sanctum or Breeze, but pro
 
 ## Documentation
 
-Full documentation, interactive multi-client integration guides, and API specifications are available in the documentation portal:
+Full documentation, interactive multi-client integration guides, and API specifications are available at the live documentation portal:
 
-- **[Documentation Portal](./docs)**
-  - [Overview](./docs/src/content/docs/getting-started/overview.md)
-  - [Why OmniAuth?](./docs/src/content/docs/getting-started/why-omniauth.md)
-  - [Installation & Setup](./docs/src/content/docs/getting-started/installation.md)
-  - [Configuration Guide](./docs/src/content/docs/getting-started/configuration.md)
-  - [Dual-Mode Architecture](./docs/src/content/docs/architecture/dual-mode-tokens.md)
-  - [Security Defenses](./docs/src/content/docs/architecture/security-defenses.md)
-  - [Two-Factor Authentication](./docs/src/content/docs/features/two-factor-auth.md)
-  - [Social Login & Token Exchange](./docs/src/content/docs/features/social-login.md)
-  - [Device Management](./docs/src/content/docs/features/device-management.md)
-  - [Next.js Client Guide](./docs/src/content/docs/clients/nextjs-web.md)
-  - [Flutter Client Guide](./docs/src/content/docs/clients/flutter-mobile.md)
-  - [Complete API Reference (29 Endpoints)](./docs/src/content/docs/reference/api-reference.md)
+- **[Live Documentation Portal](https://kaziomarsh24.github.io/laravel-omni-auth/)**
+  - [Overview](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/overview/)
+  - [Why OmniAuth?](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/why-omniauth/)
+  - [Installation & Setup](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/installation/)
+  - [Configuration Guide](https://kaziomarsh24.github.io/laravel-omni-auth/getting-started/configuration/)
+  - [Dual-Mode Architecture](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/dual-mode-tokens/)
+  - [Security Defenses](https://kaziomarsh24.github.io/laravel-omni-auth/architecture/security-defenses/)
+  - [Two-Factor Authentication](https://kaziomarsh24.github.io/laravel-omni-auth/features/two-factor-auth/)
+  - [Social Login & Token Exchange](https://kaziomarsh24.github.io/laravel-omni-auth/features/social-login/)
+  - [Device Management](https://kaziomarsh24.github.io/laravel-omni-auth/features/device-management/)
+  - [Next.js Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/nextjs-web/)
+  - [Flutter Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/flutter-mobile/)
+  - [Complete API Reference (29 Endpoints)](https://kaziomarsh24.github.io/laravel-omni-auth/reference/api-reference/)
 
 ---
 
