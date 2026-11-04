@@ -31,9 +31,8 @@ Execute the installation command to publish the configuration file and database 
 php artisan omni:install
 ```
 
-You can pass optional flags:
+Optional flags:
 - `--force`: Overwrite existing configuration and migration files.
-- `--no-migrate`: Skip running database migrations automatically.
 
 ---
 
@@ -93,13 +92,11 @@ class User extends Authenticatable
 
 ## 4. Run Migrations
 
-:::note[Custom User Models with UUIDs]
-If your application uses UUIDs or ULIDs as primary keys on the `User` model (`$keyType = 'string'`, `HasUuids`), OmniAuth's migration definitions automatically align with your schema.
-
-OmniAuth's foreign keys use `foreignIdFor(config('omni-auth.user_model'))` which resolves correctly whether your user table utilizes auto-incrementing big integers or UUID string identifiers.
+:::note[Custom User Models with UUIDs / ULIDs]
+If your application uses UUIDs or ULIDs as primary keys on the `User` model (`HasUuids`, `$keyType = 'string'`), update `$table->unsignedBigInteger('user_id')` to `$table->uuid('user_id')` (or `$table->string('user_id')`) in the published migration files before running `php artisan migrate`.
 :::
 
-If you did not run migrations during `php artisan omni:install`, execute them manually:
+Execute the published migrations to create OmniAuth's tables:
 
 ```bash
 php artisan migrate
@@ -110,7 +107,8 @@ This creates the following database tables:
 - `auth_devices`: Device audit records, platform identifiers, and push notification tokens.
 - `auth_two_factor`: Encrypted TOTP secrets and hashed recovery codes.
 - `auth_social_accounts`: Linked OAuth identities and provider user IDs.
-- `auth_magic_links`: Single-use login tokens with cryptographic hashes.
+
+> **Note on Magic Links & OTPs:** Magic login links and password reset OTPs are stored in your configured Laravel cache store (Redis, Memcached, Database, or File) with automatic cryptographic TTL expiration, requiring no separate database tables.
 
 ---
 

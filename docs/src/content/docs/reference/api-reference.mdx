@@ -3,6 +3,8 @@ title: Complete API Reference (29 Endpoints)
 description: Production-grade reference specifications for all 29 Laravel OmniAuth endpoints including headers, validation rules, dual-mode payloads, and error schemas.
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 This document provides exhaustive, copy-paste ready technical specifications for all **29 endpoints** registered by Laravel OmniAuth. Every endpoint follows our unified REST schema with explicit parameter rules, header requirements, dual-mode success payloads (Web vs. Mobile), and HTTP error objects.
 
 ---
@@ -64,8 +66,12 @@ Authenticates user credentials and issues dual-mode tokens (SameSite HttpOnly co
 | `password` | `string` | Yes | Plaintext user password | `"Secret123!"` |
 | `device_name` | `string` | No | Optional human-readable device name | `"iPhone 15 Pro"` |
 
-#### Success Response: 200 OK (Web SPA Mode)
+#### Success Responses
+
+<Tabs>
+  <TabItem label="Web SPA (Cookies)">
 Sets `omni_access_token` and `omni_refresh_token` in HttpOnly cookies. The response payload omits token strings to prevent XSS copying.
+
 ```json
 {
   "ok": true,
@@ -81,9 +87,10 @@ Sets `omni_access_token` and `omni_refresh_token` in HttpOnly cookies. The respo
   }
 }
 ```
-
-#### Success Response: 200 OK (Mobile Client Mode — `X-Client-Type: mobile`)
+  </TabItem>
+  <TabItem label="Mobile Client (Bearer)">
 Delivers tokens directly in JSON for storage in iOS Keychain / Android Keystore.
+
 ```json
 {
   "ok": true,
@@ -109,9 +116,10 @@ Delivers tokens directly in JSON for storage in iOS Keychain / Android Keystore.
   }
 }
 ```
+  </TabItem>
+  <TabItem label="2FA Challenge Required">
+Returns an encrypted challenge token valid for 5 minutes instead of access tokens when TOTP is active on the account.
 
-#### Success Response: 200 OK (When 2FA is Active on Account)
-Returns an encrypted challenge token valid for 5 minutes instead of access tokens.
 ```json
 {
   "ok": true,
@@ -123,6 +131,8 @@ Returns an encrypted challenge token valid for 5 minutes instead of access token
   }
 }
 ```
+  </TabItem>
+</Tabs>
 
 #### Error Responses
 - **401 Unauthorized** (Invalid credentials):
@@ -180,8 +190,12 @@ OmniAuth supports two distinct industry patterns for registration:
 | `password` | `string` | Yes | Password matching strength rules | `"Secret123!"` |
 | `password_confirmation` | `string` | Yes | Password confirmation | `"Secret123!"` |
 
-#### Success Response: 201 Created (Web SPA Mode — Default)
+#### Success Responses
+
+<Tabs>
+  <TabItem label="Web SPA (Cookies)">
 Sets `omni_access_token` and `omni_refresh_token` in HttpOnly SameSite cookies. The response payload omits token strings to defend against XSS token harvesting.
+
 ```json
 {
   "ok": true,
@@ -196,9 +210,10 @@ Sets `omni_access_token` and `omni_refresh_token` in HttpOnly SameSite cookies. 
   }
 }
 ```
-
-#### Success Response: 201 Created (Mobile Client Mode — `X-Client-Type: mobile`)
+  </TabItem>
+  <TabItem label="Mobile Client (Bearer)">
 Delivers tokens in JSON body for storage in iOS Keychain / Android EncryptedSharedPreferences.
+
 ```json
 {
   "ok": true,
@@ -223,9 +238,10 @@ Delivers tokens in JSON body for storage in iOS Keychain / Android EncryptedShar
   }
 }
 ```
-
-#### Success Response: 201 Created (Strict Verification-First Mode — `auto_login: false`)
+  </TabItem>
+  <TabItem label="Strict Verification-First">
 When `auto_login` is disabled in `config/omni-auth.php`, no sessions or tokens are returned until the user verifies their email.
+
 ```json
 {
   "ok": true,
@@ -240,6 +256,8 @@ When `auto_login` is disabled in `config/omni-auth.php`, no sessions or tokens a
   }
 }
 ```
+  </TabItem>
+</Tabs>
 
 #### Error Responses
 - **422 Unprocessable Entity** (Duplicate email):

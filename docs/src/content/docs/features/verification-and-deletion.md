@@ -124,4 +124,4 @@ Upon deletion:
 3. Linked OAuth identities in `auth_social_accounts` are deleted.
 4. Active TOTP secrets and recovery codes in `auth_two_factor` are erased.
 5. The user record is deleted (or soft-deleted if using `SoftDeletes`).
-6. The `UserDeleted` event is fired.
+6. The `AccountDeleted` event is fired (`KaziOmar\OmniAuth\Events\AccountDeleted`).
