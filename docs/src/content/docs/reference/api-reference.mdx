@@ -7,11 +7,13 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 This document provides exhaustive, copy-paste ready technical specifications for all **29 endpoints** registered by Laravel OmniAuth. Every endpoint follows our unified REST schema with explicit parameter rules, header requirements, dual-mode success payloads (Web vs. Mobile), and HTTP error objects.
 
-:::tip[Ready-to-Use Postman Collection]
-Test all 29 endpoints locally in seconds without manual configuration. Download the pre-configured Postman v2.1.0 collection with environment variables (`{{base_url}}`, `{{access_token}}`, `{{refresh_token}}`, `{{two_factor_token}}`) and mock JSON bodies:
+:::tip[Ready-to-Use Postman & Bruno Collection]
+Test all 29 endpoints locally in seconds without manual configuration. Fully compatible with **Postman**, **Bruno**, **Insomnia**, and **Hoppscotch** (via Postman v2.1.0 import).
+
+Includes automated token chaining (stores `access_token` and `refresh_token` automatically upon login/challenge), parameter tables, dual-mode payloads, and error response schemas embedded directly in the request docs:
 
 <a class="sl-link-button not-content primary" href="/laravel-omni-auth/laravel-omni-auth.postman_collection.json" download="laravel-omni-auth.postman_collection.json" style="margin-top: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-  📥 Download Postman Collection (.json)
+  📥 Download Postman / Bruno Collection (.json)
 </a>
 :::
 
