@@ -39,6 +39,9 @@ export default defineConfig({
 				},
 			],
 			title: 'Laravel OmniAuth',
+			components: {
+				SocialIcons: './src/components/SocialIcons.astro',
+			},
 			logo: {
 				src: './src/assets/logo.svg',
 				replacesTitle: false,
