@@ -15,23 +15,27 @@ OmniAuth handles both flows seamlessly.
 
 Supported providers: `google`, `apple`, `github`, `facebook`.
 
-```text
-Browser                          Laravel Backend                    Provider (Google/Apple)
-   |                                    |                                      |
-   |-- GET /api/auth/social/google/redirect ->| Generates OAuth state                |
-   |   (redirect endpoint)              |-- Redirects with state & client_id ->|
-   |                                    |                                      |
-   |<-- Redirect to Provider Consent ------------------------------------------|
-   |                                                                           |
-   |-- User Authorizes ------------------------------------------------------->|
-   |                                                                           |
-   |<-- Redirects to callback with ?code=XYZ&state=ABC ------------------------|
-   |                                                                           |
-   |-- GET /api/auth/social/google/callback?code=XYZ&state=ABC --------------->|
-   |                                    | Validates state strictly             |
-   |                                    | Exchanges code for profile           |
-   |                                    | Issues tokens / sets cookies         |
-   |<-- Redirects to app with session --|                                      |
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Browser
+    participant Backend as Laravel Backend
+    participant Provider as OAuth Provider (Google/Apple)
+
+    User->>Browser: Click "Sign in with Google"
+    Browser->>Backend: GET /api/auth/social/google/redirect
+    Note over Backend: Generates cryptographic CSRF state
+    Backend-->>Browser: 302 Redirect to Provider Consent Screen
+    Browser->>Provider: Load Consent Screen
+    User->>Provider: Grants Permissions
+    Provider-->>Browser: 302 Redirect to callback (?code=XYZ&state=ABC)
+    Browser->>Backend: GET /api/auth/social/google/callback?code=XYZ&state=ABC
+    Note over Backend: Validates state parameter (CSRF defense)
+    Backend->>Provider: POST /token (Exchange code for user profile)
+    Provider-->>Backend: Return verified profile & email
+    Note over Backend: Issues dual-mode tokens or sets HttpOnly cookies
+    Backend-->>Browser: 302 Redirect to frontend dashboard with session
 ```
 
 ### Strict State Parameter Enforcement

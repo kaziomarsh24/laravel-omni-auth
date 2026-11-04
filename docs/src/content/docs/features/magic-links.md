@@ -9,19 +9,24 @@ Passwordless login eliminates passwords entirely by emailing the user a cryptogr
 
 ## Workflow Diagram
 
-```text
-User                      App Client                       OmniAuth Backend
- |                            |                                   |
- |-- Enters email ----------->|-- POST /api/auth/magic-link ----->| Generates random token
- |                            |   { "email": "..." }              | Hashes token (SHA-256)
- |                            |                                   | Dispatches email
- |                            |<-- { "message": "Link sent" } ----|
- |                                                                |
- |-- Checks Email & Clicks link --------------------------------->| GET /api/auth/magic-link/verify?token=...
- |                                                                | Validates expiration & hash
- |                                                                | Marks token as consumed
- |                                                                | Checks 2FA status
- |                                                                | Returns tokens or sets cookies
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as App Client (Web/Mobile)
+    participant Backend as OmniAuth Backend
+    participant Mail as Mail Service (SMTP/SES)
+
+    User->>App: Enters email address
+    App->>Backend: POST /api/auth/magic-link { email, redirect_url }
+    Note over Backend: Generates secure token & stores SHA-256 hash
+    Backend->>Mail: Dispatches signed single-use login link
+    Mail-->>User: Delivers email with login link
+    Backend-->>App: 200 OK ("Link dispatched")
+    User->>Backend: Clicks email link (GET /api/auth/magic-link/verify?token=...)
+    Note over Backend: Validates expiration & marks token as consumed
+    Note over Backend: Checks if account has 2FA enabled
+    Backend-->>App: Returns dual-mode tokens or sets HttpOnly cookies
 ```
 
 ---

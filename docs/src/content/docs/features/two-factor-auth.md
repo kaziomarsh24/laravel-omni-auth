@@ -23,16 +23,26 @@ Ensure your host or server environment has active **NTP (Network Time Protocol)*
 
 ## Activation Flow
 
-```text
-User                      App Client                     OmniAuth Backend
- |                            |                                 |
- |-- Enable 2FA ------------->|-- POST /api/auth/2fa/setup ---->| Validates password
- |                            |   { "password": "..." }         | Generates base32 secret
- |                            |<-- { secret, qr_code, ... } ----| Stores encrypted secret
- |                            |                                 |
- |-- Scan QR / Enter Code --->|-- POST /api/auth/2fa/confirm -->| Validates TOTP code
- |                            |   { "code": "123456" }          | Sets confirmed_at
- |                            |<-- { "status": "confirmed" } ---|
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as App Client
+    participant Backend as OmniAuth Backend
+    participant AuthApp as Authenticator App (Google/1Password)
+
+    User->>App: Clicks "Enable Two-Factor Authentication"
+    App->>Backend: POST /api/auth/2fa/setup { password }
+    Note over Backend: Verifies password & generates encrypted base32 secret
+    Backend-->>App: 200 OK { secret, qr_code_svg, recovery_codes }
+    App->>User: Displays QR code & recovery codes
+    User->>AuthApp: Scans QR code with mobile camera
+    AuthApp-->>User: Generates 6-digit rolling code (e.g. 583921)
+    User->>App: Submits 6-digit code
+    App->>Backend: POST /api/auth/2fa/confirm { code: "583921" }
+    Note over Backend: RFC 6238 TOTP verification with clock drift window
+    Backend-->>App: 200 OK { message: "2FA confirmed successfully" }
+    App->>User: Two-factor authentication active
 ```
 
 ### 1. Initiate Setup

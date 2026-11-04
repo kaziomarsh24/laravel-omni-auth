@@ -8,6 +8,15 @@ export default defineConfig({
 	base: '/laravel-omni-auth',
 	integrations: [
 		starlight({
+			head: [
+				{
+					tag: 'script',
+					attrs: {
+						type: 'module',
+						src: '/laravel-omni-auth/mermaid-init.js',
+					},
+				},
+			],
 			title: 'Laravel OmniAuth',
 			logo: {
 				src: './src/assets/logo.svg',

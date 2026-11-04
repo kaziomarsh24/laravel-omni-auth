@@ -16,30 +16,18 @@ Laravel OmniAuth bridges this gap by supporting both transport layers from a sin
 
 The authentication pipeline automatically determines token delivery semantics using request metadata:
 
-```text
-                  +-----------------------------+
-                  | Incoming Login / Auth Route |
-                  +-----------------------------+
-                                 |
-                     Is X-Client-Type: mobile
-                     or mobile User-Agent detected?
-                                 |
-                 +---------------+---------------+
-                 |                               |
-              [ YES ]                         [ NO ]
-                 |                               |
-                 v                               v
-    +-------------------------+     +-------------------------+
-    | Mobile Delivery Mode    |     | Web / SPA Delivery Mode |
-    +-------------------------+     +-------------------------+
-    | Returns tokens in JSON: |     | Sets HttpOnly Cookies:  |
-    | - data.access_token     |     | - omni_access_token     |
-    | - data.refresh_token    |     | - omni_refresh_token    |
-    |                         |     |                         |
-    | Client stores tokens in |     | Browser automatically   |
-    | Flutter SecureStorage   |     | attaches cookies on     |
-    | or React Native Keytar  |     | subsequent requests     |
-    +-------------------------+     +-------------------------+
+```mermaid
+flowchart TD
+    Start(["Incoming Auth Request (/login, /register, /social)"]) --> Detect{"Is X-Client-Type: mobile<br/>or Mobile User-Agent?"}
+
+    Detect -- Yes --> Mobile["📱 Mobile Delivery Mode"]
+    Detect -- No --> Web["🌐 Web / SPA Delivery Mode"]
+
+    Mobile --> MobileJSON["Returns Tokens in JSON Body:<br/>• access_token (short-lived Bearer)<br/>• refresh_token (sliding rotation)<br/>• expires_in: 900"]
+    MobileJSON --> MobileStore["Client Persists Securely:<br/>• Flutter: flutter_secure_storage (Keychain/Keystore)<br/>• React Native: expo-secure-store"]
+
+    Web --> WebCookies["Sets SameSite HttpOnly Cookies:<br/>• omni_access_token (HttpOnly, Secure, SameSite=Lax)<br/>• omni_refresh_token (HttpOnly, Secure, SameSite=Lax)<br/>• XSRF-TOKEN (Readable CSRF cookie)"]
+    WebCookies --> WebAuto["Browser Auto-Attaches Cookies:<br/>• Immune to JavaScript XSS theft<br/>• Double-Submit CSRF cookie protection"]
 ```
 
 ---

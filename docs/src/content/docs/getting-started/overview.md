@@ -45,31 +45,30 @@ Signed email verification flows, self-service account deletion with cascading cr
 
 The following diagram illustrates how OmniAuth handles requests across different client platforms:
 
-```text
-+--------------------+        +---------------------+
-| Web SPA (Next.js)  |        | Mobile (Flutter/RN) |
-+--------------------+        +---------------------+
-          |                              |
-    HttpOnly Cookie              Authorization: Bearer
-    X-XSRF-TOKEN                 X-Client-Type: mobile
-          |                              |
-          v                              v
-+---------------------------------------------------+
-|               Laravel OmniAuth Core               |
-|  - DualModeMiddleware (Cookie vs Bearer)          |
-|  - Sanctum Integration Guard (Token Isolation)    |
-|  - RateLimiting & Brute-Force Lockouts            |
-+---------------------------------------------------+
-          |                              |
-          +--------------+---------------+
-                         |
-                         v
-          +-----------------------------+
-          |  OmniAuth Service Managers  |
-          |  - OmniAuthManager          |
-          |  - TwoFactorManager         |
-          |  - SocialAuthManager        |
-          |  - DeviceManager            |
-          |  - PasswordResetManager     |
-          +-----------------------------+
+```mermaid
+graph TD
+    subgraph Clients["Supported Client Platforms"]
+        Web["🌐 Web SPA (Next.js / Vue / Nuxt)<br/>SameSite HttpOnly Cookies<br/>X-XSRF-TOKEN CSRF Header"]
+        Mobile["📱 Mobile App (Flutter / React Native / iOS / Android)<br/>Authorization: Bearer &lt;token&gt;<br/>X-Client-Type: mobile"]
+    end
+
+    subgraph Core["Laravel OmniAuth Core Engine"]
+        Gateway["OmniAuth Dual-Mode Gateway"]
+        Guard["Sanctum Token Guard & Scope Verifier"]
+        Defense["Rate Limiting & Anti-Brute-Force Lockouts"]
+    end
+
+    subgraph Managers["Dedicated Service Managers"]
+        M1["OmniAuthManager<br/>(Core Authentication & Token Rotation)"]
+        M2["TwoFactorManager<br/>(RFC 6238 TOTP & Recovery Codes)"]
+        M3["SocialAuthManager<br/>(OAuth 2.0 & Apple/Google Native JWKS)"]
+        M4["DeviceManager<br/>(Multi-Device Tracking & Remote Revocation)"]
+        M5["PasswordResetManager<br/>(Brute-Force Protected OTP Verification)"]
+    end
+
+    Web --> Gateway
+    Mobile --> Gateway
+    Gateway --> Guard
+    Gateway --> Defense
+    Guard --> Managers
 ```

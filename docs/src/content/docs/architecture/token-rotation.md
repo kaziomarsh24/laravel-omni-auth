@@ -14,24 +14,32 @@ When a client receives tokens, two distinct token records are generated in Larav
 1. **Access Token**: Short-lived (default 15 minutes) with full API abilities `['access-api']`.
 2. **Refresh Token**: Long-lived (default 30 days) with restricted ability `['refresh']`.
 
-```text
-Time 0:00                Time 0:14              Time 0:15
-+--------------------+   Access token valid     +-----------------------------+
-| Client Logs In     |   -------------------->  | Access Token Expires (401)  |
-+--------------------+                          +-----------------------------+
-   Issues:                                                     |
-   - Access Token A (15m)                                      v
-   - Refresh Token R1 (30d)                     +-----------------------------+
-                                                | POST /api/auth/refresh      |
-                                                | with Refresh Token R1       |
-                                                +-----------------------------+
-                                                               |
-                                                +--------------+--------------+
-                                                | Revokes Token R1            |
-                                                | Issues:                     |
-                                                | - Access Token B (15m)      |
-                                                | - Refresh Token R2 (30d)    |
-                                                +-----------------------------+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as App Client (Web / Mobile)
+    participant Backend as OmniAuth Backend
+    participant DB as Token Storage (Sanctum)
+
+    Client->>Backend: POST /api/auth/login
+    Backend->>DB: Stores Access Token A (15m) & Refresh Token R1 (30d)
+    Backend-->>Client: Returns Token A + Token R1
+
+    Note over Client: 15 minutes elapse — Token A expires
+    Client->>Backend: GET /api/user (Bearer Token A)
+    Backend-->>Client: 401 Unauthorized (Token expired)
+
+    Client->>Backend: POST /api/auth/refresh (Submits Refresh Token R1)
+    Note over Backend: Validates R1 single-use status
+    Backend->>DB: Deletes R1 immediately (Burns token)
+    Backend->>DB: Generates Access Token B (15m) & Refresh Token R2 (30d)
+    Backend-->>Client: Returns Token B + Token R2 (Sliding window extended)
+
+    Note over Client,Backend: If attacker tries to replay burned token R1:
+    Client->>Backend: POST /api/auth/refresh (Submits burned R1)
+    Backend->>DB: Detects revoked token reuse
+    Note over Backend: Automatic Replay Security Lockout triggered!
+    Backend-->>Client: 401 Unauthorized (Session terminated)
 ```
 
 ### Single-Use Refresh Tokens
