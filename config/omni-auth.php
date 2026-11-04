@@ -62,6 +62,8 @@ return [
         'secure' => env('OMNI_COOKIE_SECURE', null), // null = auto-detect via request()->isSecure()
         'http_only' => true,
         'same_site' => env('OMNI_COOKIE_SAMESITE', 'lax'), // 'lax', 'strict', or 'none'
+        // Require custom header (X-Requested-With / X-Client-Type) on state-changing requests when authenticated via cookie
+        'csrf_protection' => env('OMNI_CSRF_PROTECTION', true),
     ],
 
     /*
@@ -85,13 +87,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Rate Limiting (Brute-Force Protection)
+    | Rate Limiting (Brute-Force & Distributed Botnet Protection)
     |--------------------------------------------------------------------------
     */
     'rate_limiting' => [
         'enabled' => env('OMNI_RATE_LIMITING_ENABLED', true),
         'max_attempts' => env('OMNI_MAX_LOGIN_ATTEMPTS', 5),
         'decay_seconds' => env('OMNI_LOGIN_DECAY_SECONDS', 60),
+
+        // Global account-level rate limit across all IPs (distributed attack defense)
+        'global_max_attempts' => env('OMNI_GLOBAL_MAX_ATTEMPTS', 20),
+        'global_decay_seconds' => env('OMNI_GLOBAL_DECAY_SECONDS', 900), // 15 minutes
     ],
 
     /*

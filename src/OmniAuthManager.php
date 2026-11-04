@@ -51,13 +51,16 @@ class OmniAuthManager
             ], 422);
         }
 
-        // 1. Rate Limiting Check (Brute-Force Protection)
+        // 1. Rate Limiting Check (Brute-Force & Distributed Botnet Protection)
         $rateLimitingEnabled = config('omni-auth.rate_limiting.enabled', true);
         $throttleKey = Str::transliterate(Str::lower($identifier) . '|' . $request->ip());
+        $globalKey = Str::transliterate(Str::lower($identifier) . '|global');
 
         if ($rateLimitingEnabled) {
             $maxAttempts = (int) config('omni-auth.rate_limiting.max_attempts', 5);
             $decaySeconds = (int) config('omni-auth.rate_limiting.decay_seconds', 60);
+            $globalMax = (int) config('omni-auth.rate_limiting.global_max_attempts', 20);
+            $globalDecay = (int) config('omni-auth.rate_limiting.global_decay_seconds', 900);
 
             if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
                 $seconds = RateLimiter::availableIn($throttleKey);
@@ -65,6 +68,16 @@ class OmniAuthManager
                 return response()->json([
                     'ok' => false,
                     'message' => "Too many login attempts. Please try again in {$seconds} seconds.",
+                    'retry_after' => $seconds,
+                ], 429);
+            }
+
+            if (RateLimiter::tooManyAttempts($globalKey, $globalMax)) {
+                $seconds = RateLimiter::availableIn($globalKey);
+
+                return response()->json([
+                    'ok' => false,
+                    'message' => "Account is temporarily locked due to multiple failed login attempts across networks. Please try again in {$seconds} seconds.",
                     'retry_after' => $seconds,
                 ], 429);
             }
@@ -78,6 +91,7 @@ class OmniAuthManager
         if (!$user || !Hash::check($password, (string) $user->getAuthPassword())) {
             if ($rateLimitingEnabled) {
                 RateLimiter::hit($throttleKey, (int) config('omni-auth.rate_limiting.decay_seconds', 60));
+                RateLimiter::hit($globalKey, (int) config('omni-auth.rate_limiting.global_decay_seconds', 900));
             }
 
             event(new Failed($guard, $user, $credentials));
@@ -91,6 +105,7 @@ class OmniAuthManager
         // 4. Success: Clear Rate Limiter and Dispatch Standard Login Event
         if ($rateLimitingEnabled) {
             RateLimiter::clear($throttleKey);
+            RateLimiter::clear($globalKey);
         }
 
         event(new Login($guard, $user, false));
@@ -127,6 +142,12 @@ class OmniAuthManager
 
         $request = $requestOrData instanceof Request ? $requestOrData : request();
 
+        $guardedKeys = [
+            'id', 'is_admin', 'role', 'roles', 'permissions',
+            'email_verified_at', 'remember_token', 'password_resets',
+            'created_at', 'updated_at'
+        ];
+
         // 2. Extract and validate incoming data
         if ($requestOrData instanceof FormRequest) {
             try {
@@ -136,7 +157,7 @@ class OmniAuthManager
                 if (method_exists($requestOrData, 'validateResolved')) {
                     $requestOrData->validateResolved();
                 }
-                $attributes = $requestOrData->validated();
+                $attributes = array_diff_key($requestOrData->validated(), array_flip($guardedKeys));
             } catch (ValidationException $e) {
                 return response()->json([
                     'ok' => false,
@@ -161,8 +182,10 @@ class OmniAuthManager
                 ], 422);
             }
 
-            // Include validated fields along with any additional inputs present in request
-            $attributes = array_merge($requestOrData->all(), $validator->validated());
+            // Strictly filter out dangerous privilege escalation keys from untrusted request inputs
+            $safeInput = array_diff_key($requestOrData->all(), array_flip($guardedKeys));
+            $attributes = array_merge($safeInput, $validator->validated());
+            $attributes = array_diff_key($attributes, array_flip($guardedKeys));
         } else {
             // Raw array passed
             $attributes = $requestOrData;
@@ -184,7 +207,9 @@ class OmniAuthManager
                 ], 422);
             }
 
-            $attributes = array_merge($attributes, $validator->validated());
+            $safeInput = array_diff_key($attributes, array_flip($guardedKeys));
+            $attributes = array_merge($safeInput, $validator->validated());
+            $attributes = array_diff_key($attributes, array_flip($guardedKeys));
         }
 
         // 3. Merge additional explicit data passed by developer
@@ -258,7 +283,7 @@ class OmniAuthManager
 
         // 1. Generate Access Token via Sanctum
         $accessTokenExpiresAt = now()->addMinutes($accessTtl);
-        $accessTokenObj = $user->createToken('access_token', ['*'], $accessTokenExpiresAt);
+        $accessTokenObj = $user->createToken('access_token', ['access-api'], $accessTokenExpiresAt);
         $accessToken = $accessTokenObj->plainTextToken;
 
         // 2. Generate Refresh Token via Sanctum (if token rotation is enabled)
@@ -335,8 +360,8 @@ class OmniAuthManager
             return $this->unauthenticatedRefreshResponse('Invalid or expired refresh token.', $request, 401);
         }
 
-        // Ensure token has refresh capability
-        if (!$tokenModel->can('issue-access-token')) {
+        // Ensure token model is strictly a refresh_token and has refresh capability
+        if ($tokenModel->name !== 'refresh_token' || !$tokenModel->can('issue-access-token')) {
             return $this->unauthenticatedRefreshResponse('Invalid token capability for refresh.', $request, 403);
         }
 

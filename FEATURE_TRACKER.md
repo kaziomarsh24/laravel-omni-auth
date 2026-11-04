@@ -75,18 +75,20 @@ Status format:
 
 ---
 
-## Module 7: Password Recovery & Passwordless Authentication
+## Module 7: Verification, Account Management & Passwordless Authentication
 46. [ ] Cryptographic time-limited OTP generation for password reset requests.
 47. [ ] Temporary signed password reset token issuance and validation.
 48. [ ] Global session revocation terminating all existing sessions upon password change.
 49. [ ] Password strength validation enforcing entropy and blocking breached or common passwords.
-50. [ ] Passwordless magic login link generation with cryptographic signed URLs.
-51. [ ] Mobile application deep-link support for magic link authentication flows.
-52. [ ] Anti-abuse rate-limiting and lockout for OTP and magic link dispatching.
+50. [ ] Standard `MustVerifyEmail` support with verification status check and resend verification endpoint.
+51. [ ] App Store mandatory account deletion & GDPR compliance (`Omni::deleteAccount()` with token/FCM cleanup).
+52. [ ] Passwordless magic login link generation with cryptographic signed URLs.
+53. [ ] Mobile application deep-link support for magic link authentication flows.
+54. [ ] Anti-abuse rate-limiting and lockout for OTP and magic link dispatching.
 
 ---
 
 ## Module 8: Documentation & Developer Experience
-53. [ ] Astro Starlight documentation portal located in `/docs`.
-54. [ ] Interactive multi-client tabbed guides comparing Next.js Web versus Flutter Mobile implementations.
-55. [ ] Artisan publishing commands for configuration, migrations, and routes.
+55. [ ] Astro Starlight documentation portal located in `/docs`.
+56. [ ] Interactive multi-client tabbed guides comparing Next.js Web versus Flutter Mobile implementations.
+57. [ ] Artisan publishing commands for configuration, migrations, and routes.
