@@ -3,11 +3,9 @@ title: Overview
 description: Introduction to Laravel OmniAuth and its system design principles.
 ---
 
-Laravel OmniAuth is a comprehensive, production-grade authentication package designed for engineering teams running Laravel as an API backend serving both web single-page applications (SPAs) and native mobile applications (iOS and Android).
+Laravel OmniAuth is an authentication package for Laravel applications serving web single-page apps (Next.js, React, Vue) and mobile apps (Flutter, React Native, iOS, Android).
 
-While Laravel provides fundamental primitives such as Sanctum and Socialite, assembling them into a hardened, production-ready system requires hundreds of lines of boilerplate and careful security auditing. Most engineering teams repeatedly solve the same challenges: dual client token semantics, device revocation, two-factor authentication, social token exchange, and account lifecycle management.
-
-OmniAuth provides a unified, production-grade API surface consisting of 30 production-ready endpoints and an extensible service architecture.
+While Laravel provides Sanctum and Socialite, building a multi-client authentication system typically requires handling dual-token delivery, device tracking, two-factor authentication, social token exchange, and account security. OmniAuth packages these features into ready-to-use endpoints and clean service classes.
 
 ## Supported Environments
 

@@ -1,9 +1,9 @@
 ---
 title: Security Defenses
-description: Deep dive into the battle-tested security architecture and vulnerability mitigations.
+description: Overview of the built-in security defenses and vulnerability mitigations in OmniAuth.
 ---
 
-OmniAuth is engineered with defense-in-depth principles. Rather than relying on simple controller validation, security checks are enforced across service managers, middleware guards, and database schemas.
+OmniAuth applies defense-in-depth principles. Security checks are enforced across service classes, middleware guards, and database schemas rather than relying solely on controller validation.
 
 Below is the technical specification of the key defenses implemented in the codebase.
 

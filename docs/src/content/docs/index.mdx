@@ -3,7 +3,7 @@ title: Laravel OmniAuth
 description: Production-grade, dual-mode authentication package for Laravel web and mobile applications.
 template: splash
 hero:
-  tagline: Unified, production-grade authentication for Web SPAs and Mobile clients. Dual-mode tokens, device tracking, TOTP 2FA, social login, and 30 hardened endpoints out of the box.
+  tagline: Unified authentication for web SPAs and mobile apps. Dual-mode tokens, device tracking, TOTP 2FA, social login, and 30 ready-to-use endpoints out of the box.
   image:
     file: ../../assets/logo.svg
   actions:
@@ -23,11 +23,11 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Architectural Highlights
+## Core Capabilities
 
 <CardGrid>
   <Card title="Dual-Mode Token Engine" icon="padlock">
-    Native support for two distinct client models from the same endpoints. Web SPAs receive hardened SameSite HttpOnly cookies with CSRF protection; mobile clients receive short-lived Bearer tokens and sliding refresh tokens.
+    Native support for two distinct client models from the same endpoints. Web SPAs receive SameSite HttpOnly cookies with CSRF protection; mobile clients receive short-lived Bearer tokens and sliding refresh tokens.
   </Card>
   <Card title="Multi-Device Tracking & Revocation" icon="laptop">
     Every authenticated session records device fingerprint, OS, browser, IP address, and FCM push notification tokens. Users can inspect active devices and revoke suspect sessions remotely.

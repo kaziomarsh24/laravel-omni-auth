@@ -3,7 +3,7 @@ title: Next.js & Web SPA Integration
 description: Complete client-side integration guide for Next.js, React, and single-page applications.
 ---
 
-When integrating web frontends with Laravel OmniAuth, the application should leverage `HttpOnly` cookies. Storing access tokens in browser memory or `localStorage` creates severe cross-site scripting (XSS) liabilities.
+When integrating web frontends with Laravel OmniAuth, the application should use `HttpOnly` cookies. Storing access tokens in browser memory or `localStorage` creates severe cross-site scripting (XSS) liabilities.
 
 ---
 

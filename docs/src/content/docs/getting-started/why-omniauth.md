@@ -3,9 +3,9 @@ title: Why OmniAuth?
 description: Architectural vulnerabilities in standard Laravel auth implementations and how OmniAuth eliminates them.
 ---
 
-Most engineering teams begin new Laravel projects by installing Laravel Sanctum or Breeze, assuming that built-in primitives guarantee end-to-end security. While Sanctum provides reliable token issuance and cookie authentication, connecting it to mobile clients, social login providers, multi-device tracking, and two-factor workflows introduces critical security edge cases.
+When starting a new Laravel project, developers often install Laravel Sanctum or Breeze. While Sanctum provides token issuance and cookie authentication, connecting it to mobile clients, social login providers, multi-device tracking, and two-factor workflows introduces complex security edge cases.
 
-OmniAuth was developed directly out of these recurring production vulnerabilities. Its codebase has undergone multiple rounds of rigorous security audits and is enforced by a comprehensive test suite of 121 automated tests and 663 assertions.
+OmniAuth addresses these recurring challenges with an automated test suite of 135 tests and 712 assertions covering token rotation, session isolation, timing attack prevention, and device management.
 
 ---
 
@@ -154,4 +154,4 @@ Many two-factor implementations set a session flag upon successful initial authe
 
 ## Summary
 
-OmniAuth is engineered as a zero-compromise foundation. You get the developer experience of a turnkey package without the hidden security liabilities of a hand-rolled prototype.
+OmniAuth provides a solid foundation for Laravel authentication. You get clean, pre-built endpoints and services without having to rebuild common security protections from scratch.
