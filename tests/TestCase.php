@@ -124,6 +124,14 @@ abstract class TestCase extends Orchestra
         // 5. Run auth_social_accounts migration
         $socialMigration = require __DIR__ . '/../database/migrations/2026_01_01_000003_create_auth_social_accounts_table.php';
         $socialMigration->up();
+
+        // 6. Run add_refresh_token_id migration
+        $refreshTokenMigration = require __DIR__ . '/../database/migrations/2026_01_01_000004_add_refresh_token_id_to_auth_devices_table.php';
+        $refreshTokenMigration->up();
+
+        // 7. Run add_password_set_at migration
+        $passwordSetAtMigration = require __DIR__ . '/../database/migrations/2026_01_01_000005_add_password_set_at_to_users_table.php';
+        $passwordSetAtMigration->up();
     }
 }
 

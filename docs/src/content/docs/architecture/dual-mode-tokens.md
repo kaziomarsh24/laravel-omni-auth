@@ -26,8 +26,8 @@ flowchart TD
     Mobile --> MobileJSON["Returns Tokens in JSON Body:<br/>• access_token (short-lived Bearer)<br/>• refresh_token (sliding rotation)<br/>• expires_in: 900"]
     MobileJSON --> MobileStore["Client Persists Securely:<br/>• Flutter: flutter_secure_storage (Keychain/Keystore)<br/>• React Native: expo-secure-store"]
 
-    Web --> WebCookies["Sets SameSite HttpOnly Cookies:<br/>• omni_access_token (HttpOnly, Secure, SameSite=Lax)<br/>• omni_refresh_token (HttpOnly, Secure, SameSite=Lax)<br/>• XSRF-TOKEN (Readable CSRF cookie)"]
-    WebCookies --> WebAuto["Browser Auto-Attaches Cookies:<br/>• Immune to JavaScript XSS theft<br/>• Double-Submit CSRF cookie protection"]
+    Web --> WebCookies["Sets SameSite HttpOnly Cookies:<br/>• omni_access_token (HttpOnly, Secure, SameSite=Lax)<br/>• omni_refresh_token (HttpOnly, Secure, SameSite=Lax)"]
+    WebCookies --> WebAuto["Browser Auto-Attaches Cookies:<br/>• Immune to JavaScript XSS theft<br/>• Custom anti-CSRF request header defense"]
 ```
 
 ---
@@ -53,9 +53,9 @@ OmniAuth evaluates incoming requests deterministically in the following strict o
 
 When a browser makes a request to `/api/auth/login`:
 - OmniAuth sets an `omni_access_token` cookie with `HttpOnly: true`, `SameSite: Lax`, and `Secure: true` (in production).
-- The token payload is omitted from the JSON body (`access_token: null`) to prevent client-side JavaScript from accidentally copying it into `localStorage`.
-- A second sliding `omni_refresh_token` cookie is set with path `/api/auth/refresh`.
-- **CSRF Isolation**: When authenticating via cookies, state-changing requests (POST, PUT, DELETE) require a custom header (such as `X-Requested-With: XMLHttpRequest` or `X-XSRF-TOKEN`). Browsers prohibit cross-origin scripts from forging custom headers, defeating cross-site request forgery without requiring complex session synchronization.
+- The token payload is completely omitted from the JSON body (`access_token` is excluded) to prevent client-side JavaScript from accidentally copying it into `localStorage`.
+- A second sliding `omni_refresh_token` cookie is set with configured cookie path (default: `/`).
+- **CSRF Isolation**: When authenticating via cookies, state-changing requests (POST, PUT, DELETE) require a custom header (such as `X-Requested-With: XMLHttpRequest`, `X-CSRF-TOKEN`, `X-XSRF-TOKEN`, or `X-Client-Type`). Browsers prohibit cross-origin scripts from forging custom headers, defeating cross-site request forgery without requiring complex session synchronization.
 
 ---
 

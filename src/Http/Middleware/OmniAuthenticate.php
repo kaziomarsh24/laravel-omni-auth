@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Http\Middleware;
 
 use Closure;
@@ -31,11 +33,11 @@ class OmniAuthenticate
         $user = auth($guard)->user();
         $request->setUserResolver(fn() => $user);
 
-        // H1: Prevent Refresh Tokens from being used as Access Tokens
+        // H1 / N7: Prevent Refresh Tokens from being used as Access Tokens
         if ($user && method_exists($user, 'currentAccessToken')) {
             $token = $user->currentAccessToken();
             if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
-                if ($token->name === 'refresh_token' || !$token->can('access-api')) {
+                if ($token->name === 'refresh_token' || in_array('issue-access-token', (array) $token->abilities, true)) {
                     return response()->json([
                         'ok' => false,
                         'message' => 'Invalid token capability. Refresh tokens cannot access protected API endpoints.',

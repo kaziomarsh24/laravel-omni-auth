@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
@@ -96,9 +98,22 @@ class TwoFactorController extends Controller
         $password = $request->input('password');
         $code = $request->input('code');
 
-        // C4: Require re-authentication for initial setup if account has a password
-        if (!empty($user->password)) {
+        $throttleKey = "omni_reauth_2fa_setup:{$user->getAuthIdentifier()}";
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'ok' => false,
+                'message' => "Too many attempts. Please try again in {$seconds} seconds.",
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
+        $hasPassword = Omni::hasUserSetPassword($user);
+
+        // C4: Require re-authentication for initial setup if account has a user-set password
+        if ($hasPassword) {
             if (!$password || !Hash::check($password, $user->password)) {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                 return response()->json([
                     'ok' => false,
                     'message' => 'Password confirmation is required to set up two-factor authentication.',
@@ -108,8 +123,9 @@ class TwoFactorController extends Controller
 
         // C4: If 2FA is already confirmed and active, require password or code re-auth
         if (Omni::twoFactor()->isEnabled($user)) {
-            if (!empty($user->password)) {
+            if ($hasPassword) {
                 if (!$password || !Hash::check($password, $user->password)) {
+                    \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                     return response()->json([
                         'ok' => false,
                         'message' => 'Current password confirmation is required to re-configure two-factor authentication.',
@@ -118,18 +134,22 @@ class TwoFactorController extends Controller
             } elseif ($code) {
                 $twoFactor = \KaziOmar\OmniAuth\Models\AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->first();
                 if (!$twoFactor || !Omni::twoFactor()->verifyCode($twoFactor->secret, trim($code))) {
+                    \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                     return response()->json([
                         'ok' => false,
                         'message' => 'Valid two-factor code is required to re-configure two-factor authentication.',
                     ], 422);
                 }
             } else {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                 return response()->json([
                     'ok' => false,
                     'message' => 'Authentication confirmation (password or two-factor code) is required.',
                 ], 422);
             }
         }
+
+        \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
 
         $setupData = Omni::twoFactor()->setup($user);
 
@@ -186,11 +206,23 @@ class TwoFactorController extends Controller
             ], 400);
         }
 
+        $throttleKey = "omni_reauth_2fa_recovery:{$user->getAuthIdentifier()}";
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'ok' => false,
+                'message' => "Too many failed attempts. Please try again in {$seconds} seconds.",
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
         $password = $request->input('password');
         $code = $request->input('code');
+        $hasPassword = Omni::hasUserSetPassword($user);
 
-        if (!empty($user->password)) {
+        if ($hasPassword) {
             if (!$password || !Hash::check($password, $user->password)) {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                 return response()->json([
                     'ok' => false,
                     'message' => 'Password confirmation is required to regenerate recovery codes.',
@@ -199,17 +231,21 @@ class TwoFactorController extends Controller
         } elseif ($code) {
             $twoFactor = \KaziOmar\OmniAuth\Models\AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->first();
             if (!$twoFactor || !Omni::twoFactor()->verifyCode($twoFactor->secret, trim($code))) {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                 return response()->json([
                     'ok' => false,
                     'message' => 'Valid two-factor code is required to regenerate recovery codes.',
                 ], 422);
             }
         } else {
+            \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
             return response()->json([
                 'ok' => false,
                 'message' => 'Authentication confirmation (password or two-factor code) is required.',
             ], 422);
         }
+
+        \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
 
         $codes = Omni::twoFactor()->regenerateRecoveryCodes($user);
 
@@ -247,8 +283,9 @@ class TwoFactorController extends Controller
         // C4: Re-authentication required to disable 2FA
         $password = $request->input('password');
         $code = $request->input('code');
+        $hasPassword = Omni::hasUserSetPassword($user);
 
-        if (!empty($user->password)) {
+        if ($hasPassword) {
             if (!$password || !Hash::check($password, $user->password)) {
                 \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                 return response()->json([

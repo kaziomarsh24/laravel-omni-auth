@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Services;
 
 use Exception;
@@ -184,7 +186,19 @@ class PasswordResetManager
 
         // Update password
         $user->password = Hash::make($newPassword);
+        if (\Illuminate\Support\Facades\Schema::hasColumn($user->getTable(), 'password_set_at')) {
+            $user->password_set_at = now();
+        }
         $user->save();
+
+        // Clear social-only marker if previously set
+        $this->forgetCache("omni_social_only_user:{$user->getAuthIdentifier()}");
+        $socialAccount = AuthSocialAccount::where('user_id', $user->getAuthIdentifier())->first();
+        if ($socialAccount && !empty($socialAccount->data['is_social_only'])) {
+            $data = (array) $socialAccount->data;
+            unset($data['is_social_only']);
+            $socialAccount->update(['data' => $data]);
+        }
 
         // Invalidate reset token immediately
         $this->forgetCache($tokenKey);
@@ -486,18 +500,15 @@ class PasswordResetManager
      */
     public function deleteAccount(Authenticatable|Model $user, ?string $password = null): bool
     {
-        $userId = $user->getAuthIdentifier();
-        $isSocialAccount = AuthSocialAccount::where('user_id', $userId)->exists();
+        $hasPassword = \KaziOmar\OmniAuth\Facades\Omni::hasUserSetPassword($user);
 
-        // If user has a password and is not a social-only user, or if password is provided, verify it
-        if (!empty($user->password)) {
-            // Social-only accounts have an auto-generated random password; allow deletion without password
-            if (!$isSocialAccount || !empty($password)) {
-                if (empty($password) || !Hash::check($password, $user->password)) {
-                    throw ValidationException::withMessages([
-                        'password' => ['Incorrect password confirmation provided for account deletion.'],
-                    ]);
-                }
+        // N1: If the user has a user-set password, password confirmation is strictly required.
+        // Password-free deletion is exclusively allowed for social-only users who never set a local password.
+        if ($hasPassword) {
+            if (empty($password) || !Hash::check($password, $user->password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Incorrect password confirmation provided for account deletion.'],
+                ]);
             }
         }
 

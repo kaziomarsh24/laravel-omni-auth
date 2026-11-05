@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Traits;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use KaziOmar\OmniAuth\Facades\Omni;
 use KaziOmar\OmniAuth\Models\AuthDevice;
 use KaziOmar\OmniAuth\Models\AuthSocialAccount;
 use KaziOmar\OmniAuth\Models\AuthTwoFactor;
@@ -53,5 +56,13 @@ trait HasOmniAuth
     public function hasTwoFactorEnabled(): bool
     {
         return $this->twoFactor !== null && $this->twoFactor->isConfirmed();
+    }
+
+    /**
+     * Determine if the user has a known, user-set password.
+     */
+    public function hasUserSetPassword(): bool
+    {
+        return Omni::hasUserSetPassword($this);
     }
 }

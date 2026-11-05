@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth;
 
 use Illuminate\Http\Request;
@@ -87,13 +89,13 @@ class OmniAuthServiceProvider extends ServiceProvider
                 return $request->cookie($cookieName);
             });
 
-            // H1: Globally prevent refresh tokens from authenticating API routes (including stock auth:sanctum)
+            // H1 / N7: Globally prevent refresh tokens from authenticating API routes without breaking custom abilities
             Sanctum::authenticateAccessTokensUsing(function ($accessToken, bool $isValid) {
                 if (!$isValid) {
                     return false;
                 }
 
-                if ($accessToken->name === 'refresh_token' || !$accessToken->can('access-api')) {
+                if ($accessToken->name === 'refresh_token' || in_array('issue-access-token', (array) $accessToken->abilities, true)) {
                     return false;
                 }
 

@@ -29,7 +29,7 @@ Every authenticated session is anchored to a tracked device record storing IP ad
 - Learn more: [Device Management Guide](/laravel-omni-auth/features/device-management/) | [Device API Reference](/laravel-omni-auth/reference/api-reference/#2-multi-device-management)
 
 ### 3. Two-Factor Authentication (TOTP)
-RFC 6238 compliant time-based one-time passwords. Secrets are encrypted at rest with Laravel's application key. Recovery codes are cryptographically hashed using SHA-256. Setup and recovery code regeneration require password re-authentication.
+RFC 6238 compliant time-based one-time passwords. Secrets are encrypted at rest with Laravel's application key. Recovery codes are securely hashed using Laravel's configured hasher (`Hash::make`, Bcrypt/Argon2id). Setup and recovery code regeneration require password re-authentication.
 - Learn more: [Two-Factor Authentication Guide](/laravel-omni-auth/features/two-factor-auth/) | [2FA API Reference](/laravel-omni-auth/reference/api-reference/#3-two-factor-authentication)
 
 ### 4. Social Authentication
@@ -55,7 +55,7 @@ The following diagram illustrates how OmniAuth handles requests across different
 ```mermaid
 graph TD
     subgraph Clients["Supported Client Platforms"]
-        Web["🌐 Web SPA (Next.js / Vue / Nuxt)<br/>SameSite HttpOnly Cookies<br/>X-XSRF-TOKEN CSRF Header"]
+        Web["🌐 Web SPA (Next.js / Vue / Nuxt)<br/>SameSite HttpOnly Cookies<br/>Custom Anti-CSRF Header"]
         Mobile["📱 Mobile App (Flutter / React Native / iOS / Android)<br/>Authorization: Bearer &lt;token&gt;<br/>X-Client-Type: mobile"]
     end
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Http\Controllers;
 
 use Exception;
@@ -203,21 +205,36 @@ class VerificationController extends Controller
      */
     public function deleteAccount(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $throttleKey = "omni_reauth_delete_account:{$user->getAuthIdentifier()}";
+
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'ok' => false,
+                'message' => "Too many failed attempts. Please try again in {$seconds} seconds.",
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
         $validated = $request->validate([
             'password' => ['nullable', 'string'],
         ]);
 
         try {
             Omni::passwordReset()->deleteAccount(
-                $request->user(),
+                $user,
                 $validated['password'] ?? null
             );
+
+            \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
 
             return response()->json([
                 'ok' => true,
                 'message' => 'Your account has been deleted permanently along with all active sessions.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
             return response()->json([
                 'ok' => false,
                 'message' => $e->getMessage(),

@@ -256,6 +256,7 @@ class SecurityAuditTest extends TestCase
             'name' => 'TwoFA Social User',
             'email' => 'twofa-social@example.com',
             'password' => Hash::make('Password123!'),
+            'email_verified_at' => now(),
         ]);
 
         // Enable 2FA on account

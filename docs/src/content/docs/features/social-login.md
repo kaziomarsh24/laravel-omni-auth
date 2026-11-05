@@ -13,7 +13,7 @@ OmniAuth handles both flows seamlessly.
 
 ## Web OAuth 2.0 Flow
 
-Supported providers: `google`, `apple`, `github`, `facebook`. Initiated via [`GET /api/auth/social/{provider}/redirect`](/laravel-omni-auth/reference/api-reference/#get-apiauthsocialproviderredirect) and completed at [`GET|POST /api/auth/social/{provider}/callback`](/laravel-omni-auth/reference/api-reference/#getpost-apiauthsocialprovidercallback).
+Supported providers: `google`, `apple`, `github`. Initiated via [`GET /api/auth/social/{provider}/redirect`](/laravel-omni-auth/reference/api-reference/#get-apiauthsocialproviderredirect) and completed at [`GET|POST /api/auth/social/{provider}/callback`](/laravel-omni-auth/reference/api-reference/#getpost-apiauthsocialprovidercallback).
 
 ```mermaid
 sequenceDiagram
@@ -35,7 +35,7 @@ sequenceDiagram
     Backend->>Provider: POST /token (Exchange code for user profile)
     Provider-->>Backend: Return verified profile & email
     Note over Backend: Issues dual-mode tokens or sets HttpOnly cookies
-    Backend-->>Browser: 302 Redirect to frontend dashboard with session
+    Backend-->>Browser: Returns authentication JSON response with session tokens/cookies
 ```
 
 ### Strict State Parameter Enforcement
@@ -79,6 +79,11 @@ Response:
   }
 }
 ```
+
+### Provider Token Verification Mechanics
+
+- **Apple Sign-In (`apple`)**: Identity tokens are validated using native OpenSSL RS256 cryptographic verification against Apple's live public keys (`https://appleid.apple.com/auth/keys`). JWKS keys are cached with 12-hour TTL and automatically refetched when key rotation introduces a new `kid`. Token payload verification enforces matching audience (`aud`), issuer (`https://appleid.apple.com`), and valid non-expired timestamps.
+- **Google Sign-In (`google`)**: Identity tokens are verified against Google's tokeninfo endpoint (`https://oauth2.googleapis.com/tokeninfo`), ensuring the token's audience matches the configured mobile or web client IDs and that the user's email is verified by Google.
 
 ---
 

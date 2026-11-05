@@ -10,7 +10,7 @@ OmniAuth includes full-featured Two-Factor Authentication (2FA) compatible with 
 ## Architecture & Storage Security
 
 - **Encrypted Secrets**: TOTP secrets are encrypted at rest using Laravel's application key via `Crypt::encryptString()`. If the database is compromised, secrets cannot be read without the application master key.
-- **Hashed Recovery Codes**: Backup recovery codes are hashed using SHA-256 before being stored in the database. Plaintext recovery codes are only displayed once to the user during setup.
+- **Hashed Recovery Codes**: Backup recovery codes are securely hashed using Laravel's configured hasher (`Hash::make`, Bcrypt/Argon2id) before database persistence. Plaintext recovery codes are only displayed once to the user during setup.
 - **Challenge Isolation**: During initial login, if 2FA is active, access tokens are withheld. The client receives a restricted `2fa-challenge` token valid only for calling the verify endpoint.
 
 :::warning[Server NTP Clock Synchronization]
@@ -132,7 +132,7 @@ Content-Type: application/json
 Once validated:
 - The challenge token is destroyed.
 - Real `access_token` and `refresh_token` instances are issued.
-- The `UserLoggedIn` event is fired.
+- The standard Laravel `Illuminate\Auth\Events\Login` event is fired.
 
 ### Recovery Code Fallback
 

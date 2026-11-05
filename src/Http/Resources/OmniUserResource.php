@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Http\Resources;
 
 use Illuminate\Http\Request;

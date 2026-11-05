@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Services;
 
 use Exception;
@@ -524,10 +526,15 @@ class SocialAuthManager
                     if (empty($existingUser->email_verified_at)) {
                         $existingUser->email_verified_at = now();
                         $existingUser->password = Hash::make(Str::random(64));
+                        if (\Illuminate\Support\Facades\Schema::hasColumn($existingUser->getTable(), 'password_set_at')) {
+                            $existingUser->password_set_at = null;
+                        }
                         if (method_exists($existingUser, 'tokens')) {
                             $existingUser->tokens()->delete();
                         }
                         AuthDevice::where('user_id', $existingUser->getAuthIdentifier())->delete();
+                        // N4: Attacker 2FA cleanup on pre-hijacked account
+                        \KaziOmar\OmniAuth\Models\AuthTwoFactor::where('user_id', $existingUser->getAuthIdentifier())->delete();
                         $existingUser->save();
                     }
 
@@ -554,12 +561,23 @@ class SocialAuthManager
                 'password' => Hash::make(Str::random(32)),
             ];
 
+            $newUserTable = (new $userModelClass())->getTable();
+            if (\Illuminate\Support\Facades\Schema::hasColumn($newUserTable, 'password_set_at')) {
+                $userData['password_set_at'] = null;
+            }
+
             if (!empty($profile['email_verified'])) {
                 $userData['email_verified_at'] = now();
             }
 
             /** @var Authenticatable&Model $newUser */
             $newUser = $userModelClass::create($userData);
+
+            $this->cache()->forever("omni_social_only_user:{$newUser->getAuthIdentifier()}", true);
+
+            $accountData = (array) ($profile['data'] ?? []);
+            $accountData['is_social_only'] = true;
+            $accountData['initial_signup'] = true;
 
             AuthSocialAccount::create([
                 'user_id' => $newUser->getAuthIdentifier(),
@@ -568,7 +586,7 @@ class SocialAuthManager
                 'token' => $profile['token'] ?? null,
                 'refresh_token' => $profile['refresh_token'] ?? null,
                 'avatar' => $profile['avatar'] ?? null,
-                'data' => $profile['data'] ?? null,
+                'data' => $accountData,
             ]);
 
             event(new \Illuminate\Auth\Events\Registered($newUser));

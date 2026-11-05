@@ -23,11 +23,11 @@ Rolling authentication in Laravel usually starts with Sanctum or Breeze, but pro
 
 - **Dual-Mode Delivery**: Transparently negotiates between HttpOnly cookies with CSRF validation for browsers, and Authorization headers with device keychains for mobile.
 - **Refresh Token Isolation**: Prevents long-lived refresh tokens from accessing standard API routes via framework guard hooks (`Sanctum::authenticateAccessTokensUsing`).
-- **Apple & Google RS256 Validation**: Strictly enforces RS256 JWKS asymmetric signatures on Apple and Google identity tokens, preventing key confusion (`HS256`) and caching failures during outages.
-- **Account Pre-Hijacking Prevention**: Links verified social logins safely; unverified pre-existing passwords are automatically invalidated and prior sessions revoked.
-- **Constant-Time Timing Attack Defense**: Executes pre-computed dummy bcrypt comparisons on non-existent users, keeping timing identical (~235ms vs ~259ms).
+- **Apple RS256 & Google Token Validation**: Strictly enforces RS256 JWKS asymmetric signatures on Apple identity tokens with key-rotation refetch, and validates Google tokens via tokeninfo.
+- **Account Pre-Hijacking Prevention**: Links verified social logins safely; unverified pre-existing passwords and attacker 2FA credentials are automatically purged upon verified social claim.
+- **Constant-Time Timing Attack Defense**: Executes dynamic dummy hash comparisons matching the application's active hasher driver on non-existent users.
 - **29 Production Endpoints**: Turnkey API surface covering credentials, TOTP 2FA, social login, device auditing, magic links, and GDPR account deletion.
-- **Battle-Tested**: 94 automated tests (514 assertions) verified against two rounds of whitebox penetration auditing.
+- **Thorough Test Coverage**: 112 automated tests (612 assertions) verifying security, concurrency locks, token rotation, and threat defenses.
 
 ---
 
@@ -143,8 +143,7 @@ composer test
 ```
 
 ```text
-Tests:    90 passed (502 assertions)
-Duration: ~1.9s
+Tests:    112 passed (612 assertions)
 ```
 
 ---

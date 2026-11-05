@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -377,7 +379,7 @@ class TwoFactorManager
      */
     public function qrCodeUri(string $secret, Authenticatable|Model $user): string
     {
-        $issuer = config('omni-auth.two_factor.issuer', config('app.name', 'Laravel'));
+        $issuer = (string) (config('omni-auth.two_factor.issuer') ?: (config('app.name') ?: 'Laravel'));
         $identifierColumn = config('omni-auth.identifier_column', 'email');
         $identifier = $user->{$identifierColumn} ?? $user->email ?? $user->getAuthIdentifier();
 

@@ -44,10 +44,10 @@ Here are the specific failure modes standard Laravel implementations encounter a
 ### The Vulnerability
 Laravel Sanctum issues `PersonalAccessToken` instances. By default, any valid token passed via `Authorization: Bearer <token>` authenticates `$request->user()` across every route protected by `auth:sanctum`.
 
-If an application implements custom refresh tokens using Sanctum, developers frequently create a long-lived token with the ability `['refresh']` and assume standard routes will reject it. However, unless every single route in the application explicitly enforces `abilities:access-api`, a compromised or intercepted refresh token can be used directly against regular API endpoints.
+If an application implements custom refresh tokens using Sanctum, developers frequently create a long-lived token with the ability `['issue-access-token']` and assume standard routes will reject it. However, unless every single route in the application explicitly enforces `abilities:access-api`, a compromised or intercepted refresh token can be used directly against regular API endpoints.
 
 ### OmniAuth Solution
-OmniAuth hooks into Sanctum's token resolution lifecycle via `Sanctum::authenticateAccessTokensUsing()`. At the framework guard level, any token carrying the internal `refresh` ability is immediately rejected (HTTP 401/403) from accessing business routes. Refresh tokens are only valid when hitting the dedicated `/api/auth/refresh` endpoint.
+OmniAuth hooks into Sanctum's token resolution lifecycle via `Sanctum::authenticateAccessTokensUsing()`. At the framework guard level, any token carrying the internal `issue-access-token` ability or named `refresh_token` is immediately rejected (HTTP 401/403) from accessing business routes. Refresh tokens are only valid when hitting the dedicated `/api/auth/refresh` endpoint.
 
 ---
 

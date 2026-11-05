@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -62,6 +64,14 @@ class DeviceManager
         }
 
         if ($device) {
+            // N2: If logging in again on the same physical device, revoke old tokens to prevent orphaned valid sessions
+            if ($token && $device->token_id && $device->token_id !== $token->id) {
+                PersonalAccessToken::where('id', $device->token_id)->delete();
+            }
+            if ($refreshToken && $device->refresh_token_id && $device->refresh_token_id !== $refreshToken->id) {
+                PersonalAccessToken::where('id', $device->refresh_token_id)->delete();
+            }
+
             $device->update($attributes);
             return $device->fresh();
         }
@@ -93,6 +103,8 @@ class DeviceManager
             ->map(function (AuthDevice $device) use ($currentDeviceId) {
                 $array = $device->toArray();
                 $array['is_current_device'] = ($device->id === $currentDeviceId);
+                $array['is_current'] = ($device->id === $currentDeviceId);
+                $array['browser'] = $this->detectBrowser((string) ($device->user_agent ?? ''));
 
                 return $array;
             });
@@ -223,6 +235,14 @@ class DeviceManager
         $device = $this->current($user, $request);
 
         if ($device) {
+            // N2: Clean up associated access and refresh tokens on single-device logout
+            if ($device->token_id) {
+                PersonalAccessToken::where('id', $device->token_id)->delete();
+            }
+            if ($device->refresh_token_id) {
+                PersonalAccessToken::where('id', $device->refresh_token_id)->delete();
+            }
+
             // Purge FCM token to ensure no unauthorized push notifications reach this device
             $device->update(['fcm_token' => null]);
             $device->delete();

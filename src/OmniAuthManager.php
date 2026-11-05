@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KaziOmar\OmniAuth;
 
 use Illuminate\Auth\Events\Failed;
@@ -56,6 +58,51 @@ class OmniAuthManager
     }
 
     /**
+     * Determine if the user has a known, user-set password (as opposed to being a passwordless social-only user).
+     */
+    public function hasUserSetPassword(Authenticatable|Model $user): bool
+    {
+        if (empty($user->password)) {
+            return false;
+        }
+
+        $userId = $user->getAuthIdentifier();
+
+        // 1. Check if the user is flagged in cache or social account record as social-only signup
+        if ($this->cache()->get("omni_social_only_user:{$userId}")) {
+            return false;
+        }
+
+        $socialAccount = \KaziOmar\OmniAuth\Models\AuthSocialAccount::where('user_id', $userId)->first();
+        if ($socialAccount && !empty($socialAccount->data['is_social_only'])) {
+            return false;
+        }
+
+        // 2. If password_set_at column exists and is explicitly null, only treat as passwordless if they have a social account
+        if (array_key_exists('password_set_at', $user->getAttributes()) && $user->password_set_at === null) {
+            $hasSocialAccount = \KaziOmar\OmniAuth\Models\AuthSocialAccount::where('user_id', $userId)->exists();
+            if ($hasSocialAccount) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Generate or resolve a cached dummy password hash matching the application's active hasher driver and cost.
+     * Prevents timing attacks without failing on Argon2/Argon2id hashing drivers.
+     */
+    public function getDummyPasswordHash(): string
+    {
+        $driver = (string) config('hashing.driver', 'bcrypt');
+
+        return (string) $this->cache()->rememberForever("omni_dummy_password_hash_{$driver}", function () {
+            return Hash::make('__omni_timing_dummy_password__');
+        });
+    }
+
+    /**
      * Access the social authentication manager.
      */
     public function social(): SocialAuthManager
@@ -102,6 +149,11 @@ class OmniAuthManager
             ], 422);
         }
 
+        // Normalize email identifier to lowercase to prevent case-sensitivity login mismatch
+        if ($identifierColumn === 'email' || filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $identifier = strtolower(trim($identifier));
+        }
+
         // 1. Rate Limiting Check (Brute-Force & Distributed Botnet Protection)
         $rateLimitingEnabled = config('omni-auth.rate_limiting.enabled', true);
         $throttleKey = Str::transliterate(Str::lower($identifier) . '|' . $request->ip());
@@ -139,7 +191,7 @@ class OmniAuthManager
         $user = $userModelClass::where($identifierColumn, $identifier)->first();
 
         // 3. Verify Password with Side-Channel Timing Attack Prevention
-        $userPassword = $user ? (string) $user->getAuthPassword() : '$2y$12$e80MvQ1k48p7f0BqK3B0vOK0UkmZ84F1n8jW9c5S4E1Q2w3E4r5T6';
+        $userPassword = $user ? (string) $user->getAuthPassword() : $this->getDummyPasswordHash();
         $passwordValid = Hash::check($password, $userPassword);
 
         if (!$user || !$passwordValid) {
@@ -246,13 +298,21 @@ class OmniAuthManager
                 ], 422);
             }
         } elseif ($requestOrData instanceof Request) {
+            $input = $requestOrData->all();
+            if (isset($input['email']) && is_string($input['email'])) {
+                $input['email'] = strtolower(trim($input['email']));
+            }
+            if ($identifierColumn !== 'email' && isset($input[$identifierColumn]) && is_string($input[$identifierColumn]) && filter_var($input[$identifierColumn], FILTER_VALIDATE_EMAIL)) {
+                $input[$identifierColumn] = strtolower(trim($input[$identifierColumn]));
+            }
+
             $rules = config('omni-auth.registration.rules') ?? [
                 'name' => ['required', 'string', 'max:255'],
                 $identifierColumn => ['required', 'string', $identifierColumn === 'email' ? 'email' : 'string', 'max:255', "unique:{$table},{$identifierColumn}"],
                 'password' => ['required', 'string', 'min:8', 'confirmed'],
             ];
 
-            $validator = Validator::make($requestOrData->all(), $rules);
+            $validator = Validator::make($input, $rules);
 
             if ($validator->fails()) {
                 return response()->json([
@@ -278,20 +338,26 @@ class OmniAuthManager
             if (!empty($allowedAttributes) && is_array($allowedAttributes)) {
                 $allowedLower = array_map('strtolower', $allowedAttributes);
                 $attributes = [];
-                foreach ($requestOrData->all() as $k => $v) {
+                foreach ($input as $k => $v) {
                     if (in_array(strtolower((string) $k), $allowedLower, true) && !in_array(strtolower((string) $k), $guardedKeysLower, true)) {
                         $attributes[$k] = $v;
                     }
                 }
                 $attributes = array_merge($attributes, $validator->validated());
             } else {
-                $safeInput = $filterGuardedKeys($requestOrData->all());
+                $safeInput = $filterGuardedKeys($input);
                 $attributes = array_merge($safeInput, $validator->validated());
             }
             $attributes = $filterGuardedKeys($attributes);
         } else {
             // Raw array passed
             $attributes = $requestOrData;
+            if (isset($attributes['email']) && is_string($attributes['email'])) {
+                $attributes['email'] = strtolower(trim($attributes['email']));
+            }
+            if ($identifierColumn !== 'email' && isset($attributes[$identifierColumn]) && is_string($attributes[$identifierColumn]) && filter_var($attributes[$identifierColumn], FILTER_VALIDATE_EMAIL)) {
+                $attributes[$identifierColumn] = strtolower(trim($attributes[$identifierColumn]));
+            }
 
             $rules = config('omni-auth.registration.rules') ?? [
                 'name' => ['required', 'string', 'max:255'],
@@ -374,6 +440,11 @@ class OmniAuthManager
         /** @var Model $user */
         $user = new $userModelClass();
         $user->fill($attributes);
+
+        if (Schema::hasColumn($table, 'password_set_at') && !empty($attributes['password'])) {
+            $user->password_set_at = now();
+        }
+
         $user->save();
 
         // 7. Auto-Assign Role (Spatie Permission or 'role' column)
@@ -630,7 +701,15 @@ class OmniAuthManager
                     $this->deviceManager->cleanupOnLogout($user, $request);
                 }
             } elseif (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
-                $user->currentAccessToken()->delete();
+                $currentToken = $user->currentAccessToken();
+                // Revoke any refresh token associated with this device session
+                $device = \KaziOmar\OmniAuth\Models\AuthDevice::where('user_id', $user->getAuthIdentifier())
+                    ->where('token_id', $currentToken->id)
+                    ->first();
+                if ($device?->refresh_token_id) {
+                    PersonalAccessToken::where('id', $device->refresh_token_id)->delete();
+                }
+                $currentToken->delete();
                 if (Features::enabled(Features::deviceTracking())) {
                     $this->deviceManager->cleanupOnLogout($user, $request);
                 }
