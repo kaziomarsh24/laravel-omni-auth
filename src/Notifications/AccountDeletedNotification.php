@@ -39,9 +39,8 @@ class AccountDeletedNotification extends Notification
             ->subject("Your {$appName} account has been closed")
             ->greeting("Hello {$name},")
             ->line("As requested, your {$appName} account and all associated personal data have been permanently deleted.")
-            ->line('All active sessions and authentication tokens have been wiped from our systems.')
-            ->line("We're sorry to see you go! Thank you for having been with us.")
-            ->line('If this account was closed by mistake, please reach out to our support team right away.')
+            ->line('All active sessions, credentials, and authentication tokens have been permanently wiped from our systems.')
+            ->line("We're sorry to see you go! Thank you for having been part of our community, and we wish you all the best.")
             ->salutation("Best regards,\n**{$appName} Team**");
     }
 }
