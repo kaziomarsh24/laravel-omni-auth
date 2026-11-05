@@ -91,7 +91,9 @@ use App\Http\Controllers\Auth\CustomLoginController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/v1/login', [CustomLoginController::class, 'login']);
-Route::post('/v1/logout', [CustomLoginController::class, 'logout'])->middleware('auth:sanctum');
+
+// Protect routes using omni.auth (enforces cookie CSRF protection and refresh token isolation):
+Route::post('/v1/logout', [CustomLoginController::class, 'logout'])->middleware('omni.auth');
 ```
 
 ### 3. Issue Dual-Mode Tokens in Your Controller
