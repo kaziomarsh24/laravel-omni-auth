@@ -229,6 +229,10 @@ OmniAuth uses a pure **Zero Vendor Lock-in** event architecture. The core packag
 
 You can register listeners in your host application to deliver OTPs, verification URLs, and magic links across any channel: **Branded HTML Emails**, **Twilio SMS**, **Local SMS Gateways**, or **Meta WhatsApp Business**.
 
+:::tip[Built-in Notifications]
+OmniAuth ships with nine pre-configured Markdown notifications that handle these events automatically out of the box. To configure, toggle, or customize the built-in emails, see the dedicated [Notifications & Alerts Guide](/laravel-omni-auth/features/notifications/).
+:::
+
 ### Security Milestone Events
 
 <div class="comparison-table-wrapper">
@@ -250,7 +254,7 @@ You can register listeners in your host application to deliver OTPs, verificatio
 Choose your delivery channel below to see copy-paste listener implementations:
 
 <Tabs>
-  <TabItem label="✉️ Email (Laravel Mail / Resend)">
+  <TabItem label="Email (Native / Resend)">
 Use Laravel's native mail system or modern providers like Resend, Postmark, or Mailgun to send branded HTML emails:
 
 ```php
@@ -290,7 +294,7 @@ MAIL_PORT=1025
 ```
   </TabItem>
 
-  <TabItem label="📱 SMS (Twilio / Local Gateways)">
+  <TabItem label="SMS (Twilio / Gateways)">
 Deliver instant 6-digit OTP codes directly to mobile phones via Twilio or any local telecom HTTP gateway (e.g. SSL Wireless, Greenweb, MSG91):
 
 ```php
@@ -329,7 +333,7 @@ TWILIO_FROM=+15551234567
 ```
   </TabItem>
 
-  <TabItem label="💬 WhatsApp (Meta Cloud API / Twilio)">
+  <TabItem label="WhatsApp (Meta Cloud API)">
 Send high-delivery verification messages via Meta WhatsApp Business Platform or Twilio WhatsApp channel:
 
 ```php

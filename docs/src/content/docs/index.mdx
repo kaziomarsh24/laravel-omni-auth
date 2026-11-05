@@ -48,7 +48,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Verified Test Coverage Matrix
 
-Every release of Laravel OmniAuth is verified by an automated test suite comprising **121 tests** and **663 assertions** spanning 10 architectural domains. The package has undergone consecutive rounds of rigorous security auditing to ensure full resistance against credential stuffing, token replay, algorithm confusion, and session hijacking.
+Every release of Laravel OmniAuth is verified by an automated test suite comprising **135 tests** and **712 assertions** spanning 11 architectural domains. The package has undergone consecutive rounds of rigorous security auditing to ensure full resistance against credential stuffing, token replay, algorithm confusion, and session hijacking.
 
 | Test Domain | Target Scenarios Verified | Tests / Assertions | Status |
 | :--- | :--- | :---: | :---: |
@@ -60,6 +60,7 @@ Every release of Laravel OmniAuth is verified by an automated test suite compris
 | **Multi-Device Tracking** | Device fingerprinting (OS, browser, IP), persistent web device cookie, FCM push token syncing, remote session termination | 9 tests (50 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Registration & Hydration** | Dynamic field persistence, mass-assignment guards, case variants, default role assignment | 12 tests (68 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Passwordless & GDPR** | Cryptographic 6-digit OTPs, signed magic links with host validation, full GDPR account cleanup via forceDelete | 7 tests (38 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Notifications & Alerts** | Built-in Markdown emails, 6-digit OTP delivery, security alerts (password changed, 2FA status, provider linking), GDPR notice | 14 tests (49 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Security Audits & Hardening** | Legacy user password checks, timing attacks, token abilities enforcement, Origin header spoofing, CSRF enforcement, URL validation | 46 tests (244 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Concurrency & Token Rotation** | Atomic token refresh locks, 429 Retry-After without cookie loss, 2FA setup concurrency, zero-memory token pruning | 8 tests (29 assertions) | <span class="badge-passed">✓ Passed</span> |
 

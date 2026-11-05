@@ -81,8 +81,8 @@ Response:
 }
 ```
 
-:::tip[Customizing Verification Delivery (Email, SMS, or WhatsApp)]
-When verification codes or signed links are resent, OmniAuth dispatches the `EmailVerificationRequested` event with `$event->user`, `$event->verificationUrl`, and `$event->otp`. Follow our [Multi-Channel Delivery Recipes](/laravel-omni-auth/getting-started/customization/#multi-channel-delivery-recipes) to deliver codes via custom email, Twilio SMS, or WhatsApp.
+:::tip[Customizing Verification Delivery]
+When verification codes or signed links are dispatched, OmniAuth automatically sends a Markdown email containing both the verification passcode and a signed URL. To customize this email or deliver codes via Twilio SMS or WhatsApp, see the [Notifications & Alerts Guide](/laravel-omni-auth/features/notifications/).
 :::
 
 ---
@@ -130,3 +130,4 @@ Upon deletion:
 4. Active TOTP secrets and recovery codes in `auth_two_factor` are erased.
 5. The user record is deleted (or soft-deleted if using `SoftDeletes`).
 6. The `AccountDeleted` event is fired (`KaziOmar\OmniAuth\Events\AccountDeleted`).
+7. OmniAuth automatically sends a farewell confirmation email notifying the user that all personal data, sessions, and tokens have been permanently removed. See [Notifications & Alerts](/laravel-omni-auth/features/notifications/) to configure or customize this message.

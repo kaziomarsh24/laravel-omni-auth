@@ -83,6 +83,7 @@ export default defineConfig({
 						{ label: 'Device Management', slug: 'features/device-management' },
 						{ label: 'Passwordless Magic Links', slug: 'features/magic-links' },
 						{ label: 'Verification & Account Deletion', slug: 'features/verification-and-deletion' },
+						{ label: 'Notifications & Alerts', slug: 'features/notifications' },
 					],
 				},
 				{

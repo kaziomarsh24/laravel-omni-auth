@@ -1,0 +1,359 @@
+---
+title: Notifications & Alerts
+description: Production-ready Markdown emails, security alerts, and multi-channel delivery recipes for SMS and WhatsApp.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Laravel OmniAuth includes a complete notification system for all authentication milestones and security alerts. It requires no initial setup to send emails: once your Laravel mail driver is configured, all OTP codes, magic links, and security notices work out of the box.
+
+For teams building mobile or multi-channel products, the notification pipeline is decoupled through Laravel events. You can keep the built-in emails, replace individual notification classes, or disable mail entirely to dispatch codes via SMS or WhatsApp.
+
+---
+
+## Built-in Notifications
+
+OmniAuth includes nine pre-configured Markdown notifications. Every email uses standard Laravel `MailMessage` components and inherits your application name, branding, and color scheme configured in `config/mail.php`.
+
+| Event | Notification Class | Default Subject | Trigger |
+|---|---|---|---|
+| `PasswordResetOtpRequested` | `ResetPasswordOtpNotification` | `Reset your {App} password` | `POST /api/auth/forgot-password` |
+| `EmailVerificationRequested` | `VerifyEmailNotification` | `Verify your {App} email address` | `POST /api/auth/email/resend` |
+| `MagicLinkRequested` | `MagicLoginLinkNotification` | `Sign in to {App}` | `POST /api/auth/magic-link` |
+| `TwoFactorFallbackOtpRequested` | `TwoFactorFallbackOtpNotification` | `Your {App} verification code` | `POST /api/auth/2fa/fallback-otp` |
+| `PasswordChanged` | `PasswordChangedNotification` | `Security Alert: Your password was changed - {App}` | `POST /api/auth/password/change` or reset |
+| `TwoFactorEnabled` | `TwoFactorStatusChangedNotification` | `Security Alert: Two-step verification was turned on - {App}` | `POST /api/auth/2fa/confirm` |
+| `TwoFactorDisabled` | `TwoFactorStatusChangedNotification` | `Security Alert: Two-step verification was turned off - {App}` | `POST /api/auth/2fa/disable` |
+| `SocialAccountLinked` | `SocialAccountLinkedNotification` | `Security Alert: {Provider} was connected to your account - {App}` | OAuth callback linking |
+| `SocialAccountUnlinked` | `SocialAccountUnlinkedNotification` | `Security Alert: {Provider} was disconnected from your account - {App}` | `DELETE /api/auth/social/{provider}` |
+| `AccountDeleted` | `AccountDeletedNotification` | `Your {App} account has been closed` | `DELETE /api/auth/account` |
+
+---
+
+## Configuration
+
+The notification behavior is managed in `config/omni-auth.php` under the `notifications` section.
+
+```php
+// config/omni-auth.php
+
+'notifications' => [
+    // Master switch: set to false to disable all default mail listeners
+    'enabled' => env('OMNI_NOTIFICATIONS_ENABLED', true),
+
+    // Default channels passed to notification via() method
+    'channels' => ['mail'],
+
+    // Class map: swap any notification class with your own implementation
+    'classes' => [
+        'password_reset_otp' => \KaziOmar\OmniAuth\Notifications\ResetPasswordOtpNotification::class,
+        'verify_email' => \KaziOmar\OmniAuth\Notifications\VerifyEmailNotification::class,
+        'magic_login_link' => \KaziOmar\OmniAuth\Notifications\MagicLoginLinkNotification::class,
+        'two_factor_fallback_otp' => \KaziOmar\OmniAuth\Notifications\TwoFactorFallbackOtpNotification::class,
+        'password_changed' => \KaziOmar\OmniAuth\Notifications\PasswordChangedNotification::class,
+        'two_factor_status' => \KaziOmar\OmniAuth\Notifications\TwoFactorStatusChangedNotification::class,
+        'social_account_linked' => \KaziOmar\OmniAuth\Notifications\SocialAccountLinkedNotification::class,
+        'social_account_unlinked' => \KaziOmar\OmniAuth\Notifications\SocialAccountUnlinkedNotification::class,
+        'account_deleted' => \KaziOmar\OmniAuth\Notifications\AccountDeletedNotification::class,
+    ],
+
+    // Granular toggles: enable or disable specific alerts
+    'toggles' => [
+        'password_reset_otp' => true,
+        'verify_email' => true,
+        'magic_login_link' => true,
+        'two_factor_fallback_otp' => true,
+        'password_changed' => true,
+        'two_factor_status' => true,
+        'social_account_linked' => true,
+        'social_account_unlinked' => true,
+        'account_deleted' => true,
+    ],
+],
+```
+
+### Overriding a Notification Class
+
+If you want to use a custom email layout or adjust copy for a specific event, create your own notification class and register it in `config/omni-auth.php`:
+
+```php
+// app/Notifications/CustomResetOtpNotification.php
+
+namespace App\Notifications;
+
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+
+class CustomResetOtpNotification extends Notification
+{
+    public function __construct(
+        public string $otp,
+        public ?string $signedUrl = null
+    ) {}
+
+    public function via(mixed $notifiable): array
+    {
+        return ['mail'];
+    }
+
+    public function toMail(mixed $notifiable): MailMessage
+    {
+        return (new MailMessage())
+            ->subject('Your one-time passcode')
+            ->line('Your passcode is: ' . $this->otp);
+    }
+}
+```
+
+Then map it in your configuration:
+
+```php
+// config/omni-auth.php
+
+'classes' => [
+    'password_reset_otp' => \App\Notifications\CustomResetOtpNotification::class,
+],
+```
+
+---
+
+## Multi-Channel Delivery Recipes
+
+When you want to send verification codes through channels other than email, you have two options:
+
+1. **Global override:** Set `OMNI_NOTIFICATIONS_ENABLED=false` in `.env` and register your own event listeners.
+2. **Dual delivery:** Keep `OMNI_NOTIFICATIONS_ENABLED=true` and register an additional listener for SMS or WhatsApp.
+
+<Tabs>
+  <TabItem label="Email (Native / Resend)">
+Use this recipe if you want a custom mail handler or use third-party mail SDKs like Resend or Postmark directly:
+
+```php
+// app/Listeners/SendAuthEmailListener.php
+
+namespace App\Listeners;
+
+use Illuminate\Support\Facades\Mail;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+class SendAuthEmailListener
+{
+    public function handle(PasswordResetOtpRequested $event): void
+    {
+        $user = $event->user;
+        $otp = $event->otp;
+
+        Mail::raw("Your password reset passcode is: {$otp}", function ($message) use ($user) {
+            $message->to($user->email)->subject('Password Reset Code');
+        });
+    }
+}
+```
+
+Register this listener in `app/Providers/AppServiceProvider.php`:
+
+```php
+use App\Listeners\SendAuthEmailListener;
+use Illuminate\Support\Facades\Event;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+public function boot(): void
+{
+    Event::listen(
+        PasswordResetOtpRequested::class,
+        SendAuthEmailListener::class,
+    );
+}
+```
+  </TabItem>
+
+  <TabItem label="SMS (Twilio / Gateway)">
+Use this recipe to deliver OTP passcodes directly to a user's mobile phone via Twilio or a local SMS gateway:
+
+```php
+// app/Listeners/SendPasswordResetSms.php
+
+namespace App\Listeners;
+
+use Illuminate\Support\Facades\Http;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+class SendPasswordResetSms
+{
+    public function handle(PasswordResetOtpRequested $event): void
+    {
+        $user = $event->user;
+        $otp = $event->otp;
+
+        if (empty($user->phone)) {
+            return;
+        }
+
+        $sid = config('services.twilio.sid');
+        $token = config('services.twilio.token');
+        $from = config('services.twilio.from');
+
+        Http::asForm()
+            ->withBasicAuth($sid, $token)
+            ->post("https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json", [
+                'From' => $from,
+                'To' => $user->phone,
+                'Body' => "Your security code is {$otp}. Valid for 15 minutes.",
+            ]);
+    }
+}
+```
+
+Add your Twilio credentials to `config/services.php` and `.env`:
+
+```dotenv
+TWILIO_SID=ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+TWILIO_AUTH_TOKEN=your_auth_token_here
+TWILIO_PHONE_NUMBER=+1234567890
+```
+  </TabItem>
+
+  <TabItem label="WhatsApp (Meta Cloud API)">
+Use this recipe to send OTP codes through the official Meta WhatsApp Business Cloud API:
+
+```php
+// app/Listeners/SendWhatsAppOtpListener.php
+
+namespace App\Listeners;
+
+use Illuminate\Support\Facades\Http;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+class SendWhatsAppOtpListener
+{
+    public function handle(PasswordResetOtpRequested $event): void
+    {
+        $user = $event->user;
+        $otp = $event->otp;
+
+        if (empty($user->phone)) {
+            return;
+        }
+
+        $phoneId = config('services.whatsapp.phone_id');
+        $token = config('services.whatsapp.token');
+        $template = config('services.whatsapp.template_name', 'auth_otp');
+
+        Http::withToken($token)
+            ->post("https://graph.facebook.com/v20.0/{$phoneId}/messages", [
+                'messaging_product' => 'whatsapp',
+                'to' => $user->phone,
+                'type' => 'template',
+                'template' => [
+                    'name' => $template,
+                    'language' => ['code' => 'en'],
+                    'components' => [
+                        [
+                            'type' => 'body',
+                            'parameters' => [
+                                ['type' => 'text', 'text' => $otp]
+                            ]
+                        ]
+                    ]
+                ]
+            ]);
+    }
+}
+```
+
+Add your Meta credentials to `.env`:
+
+```dotenv
+WHATSAPP_TOKEN=your_system_user_access_token
+WHATSAPP_PHONE_ID=109283746501928
+WHATSAPP_TEMPLATE_NAME=auth_otp
+```
+  </TabItem>
+
+  <TabItem label="Dual Delivery (Email + SMS)">
+To deliver codes through both Email and SMS simultaneously, leave `OMNI_NOTIFICATIONS_ENABLED=true` and register an additional SMS listener in `app/Providers/AppServiceProvider.php`:
+
+```php
+// app/Providers/AppServiceProvider.php
+
+namespace App\Providers;
+
+use App\Listeners\SendPasswordResetSms;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        // OmniAuth handles the default email notification automatically.
+        // This listener dispatches the SMS version concurrently:
+        Event::listen(
+            PasswordResetOtpRequested::class,
+            SendPasswordResetSms::class,
+        );
+    }
+}
+```
+  </TabItem>
+</Tabs>
+
+---
+
+## Local Development & Testing
+
+During local development, you do not need third-party credentials to test notifications.
+
+### 1. View Emails in Laravel Log
+
+Set the mail driver to `log` in your `.env` file:
+
+```dotenv
+MAIL_MAILER=log
+```
+
+When an OTP or alert is triggered, inspect `storage/logs/laravel.log` to view the generated email subject, body, and action buttons.
+
+### 2. View Emails in Mailpit
+
+For an inbox UI on `localhost:8025`, configure Mailpit in `.env`:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+```
+
+### 3. Testing with Notification Fake
+
+When writing PHPUnit or Pest tests in your application, use Laravel's `Notification::fake()` to verify that notifications are dispatched without sending real emails:
+
+```php
+use Illuminate\Support\Facades\Notification;
+use KaziOmar\OmniAuth\Notifications\ResetPasswordOtpNotification;
+
+public function test_password_reset_sends_notification(): void
+{
+    Notification::fake();
+
+    $this->postJson('/api/auth/forgot-password', [
+        'email' => 'user@example.com',
+    ]);
+
+    Notification::assertSentTo($user, ResetPasswordOtpNotification::class, function ($notification) {
+        return strlen($notification->otp) === 6;
+    });
+}
+```
+
+---
+
+## Next Steps
+
+- Review the [Configuration Guide](/laravel-omni-auth/getting-started/configuration/) for full `.env` variable references.
+- Explore [Passwordless Magic Links](/laravel-omni-auth/features/magic-links/) to configure one-click sign-in.
+- Learn about [Two-Factor Authentication](/laravel-omni-auth/features/two-factor-auth/) and the emergency fallback OTP flow.

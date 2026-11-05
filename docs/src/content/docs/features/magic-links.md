@@ -123,3 +123,7 @@ Response (If Account Has 2FA Enabled):
 ```
 
 Even when logging in via magic link, users with 2FA enabled must resolve the challenge token via [`POST /api/auth/2fa/challenge`](/laravel-omni-auth/reference/api-reference/#post-apiauth2fachallenge) with a valid TOTP code before access tokens or session cookies are issued.
+
+:::tip[Multi-Channel Delivery]
+OmniAuth dispatches `MagicLinkRequested` whenever a login link is requested. By default, a Markdown email containing an instant sign-in button and a 6-digit numeric passcode is sent automatically. To customize this email or deliver login codes via SMS or WhatsApp, see the [Notifications & Alerts Guide](/laravel-omni-auth/features/notifications/).
+:::

@@ -63,6 +63,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_MAGIC_LINK_TTL` | `magic_link.ttl` | `15` | Lifespan in minutes of single-use passwordless login links. | [Magic Links](/laravel-omni-auth/features/magic-links/) |
 | `OMNI_ROUTES_ENABLED` | `routes.enabled` | `true` | Master switch to register built-in routes (`false` activates Headless mode). | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_ROUTES_PREFIX` | `routes.prefix` | `'api/auth'` | Base URL prefix for all registered authentication endpoints. | [Installation Guide](/laravel-omni-auth/getting-started/installation/) |
+| `OMNI_NOTIFICATIONS_ENABLED` | `notifications.enabled` | `true` | Master switch for built-in Markdown email notifications. | [Notifications Guide](/laravel-omni-auth/features/notifications/) |
 
 </div>
 
@@ -350,4 +351,46 @@ Control URL prefix and route registration:
 
 - When `enabled => true`, all 30 production endpoints are automatically registered at `/api/auth/*`.
 - When `enabled => false`, built-in routing is completely disabled. You can build custom controllers using the `Omni` Facade (`Omni::attempt()`, `Omni::issueTokenResponse()`). See [Headless Mode](/laravel-omni-auth/getting-started/customization/#headless-mode-building-custom-routes).
+
+---
+
+## Notifications & Security Alerts
+
+Configure built-in Markdown notifications, custom notification classes, or disable mail for custom event listeners:
+
+```php
+'notifications' => [
+    'enabled' => env('OMNI_NOTIFICATIONS_ENABLED', true),
+    'channels' => ['mail'],
+    'classes' => [
+        'password_reset_otp' => \KaziOmar\OmniAuth\Notifications\ResetPasswordOtpNotification::class,
+        'verify_email' => \KaziOmar\OmniAuth\Notifications\VerifyEmailNotification::class,
+        'magic_login_link' => \KaziOmar\OmniAuth\Notifications\MagicLoginLinkNotification::class,
+        'two_factor_fallback_otp' => \KaziOmar\OmniAuth\Notifications\TwoFactorFallbackOtpNotification::class,
+        'password_changed' => \KaziOmar\OmniAuth\Notifications\PasswordChangedNotification::class,
+        'two_factor_status' => \KaziOmar\OmniAuth\Notifications\TwoFactorStatusChangedNotification::class,
+        'social_account_linked' => \KaziOmar\OmniAuth\Notifications\SocialAccountLinkedNotification::class,
+        'social_account_unlinked' => \KaziOmar\OmniAuth\Notifications\SocialAccountUnlinkedNotification::class,
+        'account_deleted' => \KaziOmar\OmniAuth\Notifications\AccountDeletedNotification::class,
+    ],
+    'toggles' => [
+        'password_reset_otp' => true,
+        'verify_email' => true,
+        'magic_login_link' => true,
+        'two_factor_fallback_otp' => true,
+        'password_changed' => true,
+        'two_factor_status' => true,
+        'social_account_linked' => true,
+        'social_account_unlinked' => true,
+        'account_deleted' => true,
+    ],
+],
+```
+
+- When `enabled => true` (default), OmniAuth dispatches built-in Markdown emails automatically without requiring manual listeners.
+- When `enabled => false`, default mail listeners are unregistered. You can handle delivery via custom listeners for SMS, WhatsApp, or third-party notification services.
+- Individual alerts can be toggled on or off under `toggles`.
+- Any notification class can be overridden under `classes`.
+- For complete setup instructions and SMS/WhatsApp recipes, consult the [Notifications & Alerts Guide](/laravel-omni-auth/features/notifications/).
+
 
