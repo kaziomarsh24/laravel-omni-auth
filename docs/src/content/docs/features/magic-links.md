@@ -19,7 +19,7 @@ sequenceDiagram
 
     User->>App: Enters email address
     App->>Backend: POST /api/auth/magic-link { email, redirect_url }
-    Note over Backend: Generates secure token & stores SHA-256 hash
+    Note over Backend: Generates secure token & stores in cache with short TTL
     Backend->>Mail: Dispatches signed single-use login link
     Mail-->>User: Delivers email with login link
     Backend-->>App: 200 OK ("Link dispatched")

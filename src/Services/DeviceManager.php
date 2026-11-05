@@ -281,7 +281,9 @@ class DeviceManager
     }
 
     /**
-     * Resolve a unique device identifier from request headers or heuristics.
+     * Resolve a unique device identifier from request headers, persistent device cookie, or heuristics.
+     * R5 Fix: Uses a persistent HttpOnly cookie 'omni_device_id' on Web browsers so multiple logins
+     * originating from the same NAT / proxy and User-Agent do not kick each other off.
      */
     protected function resolveDeviceId(Authenticatable|Model $user, Request $request): string
     {
@@ -294,7 +296,38 @@ class DeviceManager
             }
         }
 
-        // Generate deterministic fingerprint from IP, User-Agent, and User ID
+        // Web browser: Check for persistent device cookie
+        $cookieName = config('omni-auth.cookie.device_name', 'omni_device_id');
+        $cookieDeviceId = $request->cookie($cookieName);
+        if ($cookieDeviceId && is_string($cookieDeviceId)) {
+            $trimmedCookie = trim($cookieDeviceId);
+            if ($trimmedCookie !== '' && strlen($trimmedCookie) <= 128 && preg_match('/^[\w\-\.]{1,128}$/', $trimmedCookie)) {
+                return $trimmedCookie;
+            }
+        }
+
+        // If client is Web, generate a new unique random device ID and queue the persistent cookie
+        if (\KaziOmar\OmniAuth\Facades\Omni::client()->isWeb($request)) {
+            $newDeviceId = 'dev_' . \Illuminate\Support\Str::random(32);
+            if (class_exists(\Illuminate\Support\Facades\Cookie::class)) {
+                \Illuminate\Support\Facades\Cookie::queue(
+                    \Illuminate\Support\Facades\Cookie::make(
+                        $cookieName,
+                        $newDeviceId,
+                        525600, // 1 year persistence
+                        config('omni-auth.cookie.path', '/'),
+                        config('omni-auth.cookie.domain', null),
+                        (bool) (config('omni-auth.cookie.secure', null) ?? $request->isSecure()),
+                        true, // HttpOnly
+                        false,
+                        config('omni-auth.cookie.same_site', 'lax')
+                    )
+                );
+            }
+            return $newDeviceId;
+        }
+
+        // Generate deterministic fingerprint from IP, User-Agent, and User ID for non-browser clients without explicit header
         $signature = implode('|', [
             $user->getAuthIdentifier(),
             $request->ip() ?? 'unknown-ip',

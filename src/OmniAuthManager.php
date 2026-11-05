@@ -59,6 +59,8 @@ class OmniAuthManager
 
     /**
      * Determine if the user has a known, user-set password (as opposed to being a passwordless social-only user).
+     * R1 Fix: Never treat legacy users or host-app created users as passwordless merely because password_set_at is null.
+     * Only accounts explicitly flagged with is_social_only metadata (and possessing no user-set password) are considered passwordless.
      */
     public function hasUserSetPassword(Authenticatable|Model $user): bool
     {
@@ -68,22 +70,15 @@ class OmniAuthManager
 
         $userId = $user->getAuthIdentifier();
 
-        // 1. Check if the user is flagged in cache or social account record as social-only signup
+        // 1. Check if the user is flagged in cache as social-only signup
         if ($this->cache()->get("omni_social_only_user:{$userId}")) {
             return false;
         }
 
+        // 2. Check if user's social record explicitly contains the is_social_only marker
         $socialAccount = \KaziOmar\OmniAuth\Models\AuthSocialAccount::where('user_id', $userId)->first();
         if ($socialAccount && !empty($socialAccount->data['is_social_only'])) {
             return false;
-        }
-
-        // 2. If password_set_at column exists and is explicitly null, only treat as passwordless if they have a social account
-        if (array_key_exists('password_set_at', $user->getAttributes()) && $user->password_set_at === null) {
-            $hasSocialAccount = \KaziOmar\OmniAuth\Models\AuthSocialAccount::where('user_id', $userId)->exists();
-            if ($hasSocialAccount) {
-                return false;
-            }
         }
 
         return true;
@@ -122,6 +117,14 @@ class OmniAuthManager
      * Access the multi-device & FCM management service.
      */
     public function devices(): DeviceManager
+    {
+        return $this->deviceManager;
+    }
+
+    /**
+     * Alias for devices().
+     */
+    public function device(): DeviceManager
     {
         return $this->deviceManager;
     }
@@ -662,15 +665,27 @@ class OmniAuthManager
     }
 
     /**
-     * Return a standardized unauthorized/forbidden response for refresh failures,
-     * ensuring browser cookies are cleared immediately for Web clients.
+     * Return a standardized unauthorized/forbidden response for refresh failures.
+     * R3 Fix: Never clear browser cookies on HTTP 429 concurrent refresh attempts.
+     * Supply Retry-After header so multiple concurrent SPA tabs can safely back off and retry.
      */
     protected function unauthenticatedRefreshResponse(string $message, Request $request, int $status = 401): JsonResponse
     {
-        $response = response()->json([
+        $payload = [
             'ok' => false,
             'message' => $message,
-        ], $status);
+        ];
+
+        if ($status === 429) {
+            $payload['retry_after'] = 1;
+        }
+
+        $response = response()->json($payload, $status);
+
+        if ($status === 429) {
+            $response->headers->set('Retry-After', '1');
+            return $response;
+        }
 
         if ($this->clientDetector->isWeb($request)) {
             $response = $this->cookieManager->forgetTokens($response);
@@ -823,6 +838,14 @@ class OmniAuthManager
      * Access the client detector instance.
      */
     public function client(): ClientDetector
+    {
+        return $this->clientDetector;
+    }
+
+    /**
+     * Alias for client().
+     */
+    public function clientDetector(): ClientDetector
     {
         return $this->clientDetector;
     }

@@ -5,7 +5,7 @@ description: Architectural vulnerabilities in standard Laravel auth implementati
 
 Most engineering teams begin new Laravel projects by installing Laravel Sanctum or Breeze, assuming that built-in primitives guarantee end-to-end security. While Sanctum provides reliable token issuance and cookie authentication, connecting it to mobile clients, social login providers, multi-device tracking, and two-factor workflows introduces critical security edge cases.
 
-OmniAuth was developed directly out of these recurring production vulnerabilities. Its codebase has undergone two rigorous rounds of whitebox security audits and is enforced by a test suite of 94 automated tests and 514 assertions.
+OmniAuth was developed directly out of these recurring production vulnerabilities. Its codebase has undergone multiple rounds of rigorous security audits and is enforced by a comprehensive test suite of 121 automated tests and 663 assertions.
 
 ---
 
@@ -23,12 +23,12 @@ The table below provides an objective, side-by-side technical comparison between
 | **Refresh Boundary Guard**<br><small>Blocks refresh tokens on standard API endpoints</small> | ❌ | ❌ | ❌ | ✅ **Framework Guard** |
 | **Multi-Device Auditing**<br><small>IP, User-Agent, device name, and single device revocation</small> | ❌ | ⚠️<br><small>Session table only</small> | ❌<br><small>Token name string only</small> | ✅ **Dedicated Device API** |
 | **Push Token (FCM) Binding**<br><small>Stores and syncs active FCM tokens per device session</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Native Social Auth**<br><small>Apple & Google RS256 JWKS asymmetric token verification</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **Native Social Auth**<br><small>Apple RS256 JWKS & Google tokeninfo asymmetric verification</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
 | **Pre-Hijacking Defense**<br><small>Invalidates unverified local password on OAuth email link</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Timing Attack Shield**<br><small>Dummy bcrypt comparison on non-existent users</small> | ❌ | ❌ | ❌ | ✅ **Built-in**<br><small>~235ms vs ~259ms</small> |
+| **Timing Attack Shield**<br><small>Dynamic dummy hash comparison matching active driver</small> | ❌ | ❌ | ❌ | ✅ **Built-in**<br><small>Driver Parity</small> |
 | **Headless 2FA Protocol**<br><small>RFC 6238 TOTP + recovery codes with token withholding</small> | ❌ | ⚠️<br><small>Web session only</small> | ❌ | ✅ **Headless Protocol** |
 | **Magic Login Links**<br><small>Single-use signed links with RFC-compliant host validation</small> | ❌ | ❌ | ❌ | ✅ **Built-in** |
-| **Production Endpoints**<br><small>Zero-boilerplate turnkey authentication routes</small> | ❌<br><small>Publishes code to app/</small> | ⚠️<br><small>Action classes only</small> | ❌<br><small>Token driver only</small> | ✅ **29 Production Endpoints** |
+| **Production Endpoints**<br><small>Zero-boilerplate turnkey authentication routes</small> | ❌<br><small>Publishes code to app/</small> | ⚠️<br><small>Action classes only</small> | ❌<br><small>Token driver only</small> | ✅ **30 Production Endpoints** |
 | **Postman & Bruno Tooling**<br><small>With automated token chaining & environment variables</small> | ❌ | ❌ | ❌ | ✅ **Included** |
 
 </div>
@@ -66,7 +66,7 @@ Consider the following sequence common to applications supporting both email/pas
 OmniAuth detects when a verified social provider attempts to link with an existing account whose local email was unverified. Upon linking:
 - The local password is immediately invalidated and replaced with high-entropy cryptographic random bytes (`Hash::make(Str::random(64))`).
 - All active devices and authentication tokens associated with the account are instantly revoked.
-- The user is notified of the credential reset.
+- Any pre-existing two-factor records setup prior to verification are purged to prevent attacker lockout.
 
 ---
 
@@ -100,7 +100,9 @@ if (! $user || ! Hash::check($request->password, $user->password)) {
 When an email does not exist, the controller returns in ~2 milliseconds. When an email exists, `Hash::check()` runs bcrypt or argon2, taking 200–300 milliseconds. Attackers exploit this timing differential to enumerate valid corporate email addresses with high statistical accuracy.
 
 ### OmniAuth Solution
-When a requested user does not exist, OmniAuth executes `Hash::check()` against a pre-computed valid dummy bcrypt hash (`$2y$10$e8wZ3oIqK8m...`). This guarantees that response times for valid and invalid emails remain statistically indistinguishable (~235ms vs ~259ms), eliminating enumeration vectors.
+When a requested user does not exist, OmniAuth executes `Hash::check()` against a dynamic dummy password hash generated to match the application's active hasher driver and cost configuration (`Omni::getDummyPasswordHash()`). 
+
+> **Persistent Cache Recommendation:** To maintain exact timing parity between existing and non-existent users, a persistent cache driver (Redis, Memcached, Database) should be used so the dummy hash is cached persistently.
 
 ---
 
@@ -116,8 +118,8 @@ However, browsers and RFC-noncompliant parsers interpret backslashes (`\`) and u
 ### OmniAuth Solution
 OmniAuth validates all redirect targets using a strict whitelist:
 - URL strings containing `\` or `@` are immediately rejected with HTTP 422.
-- The parsed hostname must match the configured application domain or an explicit whitelist.
-- Wildcard subdomains must conform to standard DNS boundary delimiters.
+- The parsed hostname must exactly match `config('app.url')` or an explicitly allowed host listed in `config('omni-auth.allowed_redirect_hosts')`.
+- Mobile custom URL schemes (e.g., `myapp://`) are supported only when explicitly declared in `config('omni-auth.magic_link.allowed_schemes')`.
 - `localhost` redirects are strictly prohibited in production and staging environments, permitted only when `app.env === 'local'` or `'testing'`.
 
 ---

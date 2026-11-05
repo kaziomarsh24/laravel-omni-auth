@@ -7,7 +7,7 @@ Laravel OmniAuth is a comprehensive, production-grade authentication package des
 
 While Laravel provides fundamental primitives such as Sanctum and Socialite, assembling them into a hardened, production-ready system requires hundreds of lines of boilerplate and careful security auditing. Most engineering teams repeatedly solve the same challenges: dual client token semantics, device revocation, two-factor authentication, social token exchange, and account lifecycle management.
 
-OmniAuth provides a unified, battle-tested API surface consisting of 29 production-ready endpoints and an extensible service architecture.
+OmniAuth provides a unified, production-grade API surface consisting of 30 production-ready endpoints and an extensible service architecture.
 
 ## Supported Environments
 
@@ -36,8 +36,8 @@ RFC 6238 compliant time-based one-time passwords. Secrets are encrypted at rest 
 Unified social login covering standard OAuth 2.0 browser redirect flows and native mobile ID token exchange (Google and Apple). Includes cryptographic RS256 signature verification via Apple JWKS with safe cache fallback.
 - Learn more: [Social Login Guide](/laravel-omni-auth/features/social-login/) | [Social API Reference](/laravel-omni-auth/reference/api-reference/#4-social-authentication--token-exchange)
 
-### 5. Password Management
-Secure password reset flows via signed URL or 6-digit OTP codes. Open-redirect protected redirect validation rejects host-spoofing techniques.
+### 5. Password Lifecycle
+Secure password reset flows via signed URL or 6-digit OTP codes, and dedicated authenticated password change endpoints for logged-in users with optional remote session revocation. Open-redirect protected redirect validation rejects host-spoofing techniques.
 - Learn more: [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) | [Password API Reference](/laravel-omni-auth/reference/api-reference/#5-password-reset--otp-verification)
 
 ### 6. Passwordless Magic Links
@@ -45,7 +45,7 @@ Cryptographically signed, single-use authentication links sent via email. Enforc
 - Learn more: [Passwordless Magic Links Guide](/laravel-omni-auth/features/magic-links/) | [Magic Links API Reference](/laravel-omni-auth/reference/api-reference/#6-passwordless-magic-links)
 
 ### 7. Verification and Account Lifecycle
-Signed email verification flows, self-service account deletion with cascading credential cleanup, and unverified account purge capabilities.
+Signed email verification flows, self-service GDPR-compliant account deletion (`forceDelete()`) with cascading credential cleanup, and token pruning commands (`omni:prune-tokens`).
 - Learn more: [Verification & Account Deletion Guide](/laravel-omni-auth/features/verification-and-deletion/) | [Lifecycle API Reference](/laravel-omni-auth/reference/api-reference/#7-email-verification--lifecycle)
 
 ## Architecture at a Glance

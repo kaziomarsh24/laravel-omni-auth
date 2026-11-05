@@ -18,6 +18,25 @@ return new class extends Migration
             Schema::table($table, function (Blueprint $table) {
                 $table->timestamp('password_set_at')->nullable()->after('password');
             });
+
+            // Backfill legacy users with an active password (excluding pure social-only signups)
+            $socialOnlyUserIds = [];
+            if (Schema::hasTable('auth_social_accounts')) {
+                $socialOnlyUserIds = \Illuminate\Support\Facades\DB::table('auth_social_accounts')
+                    ->where('data', 'like', '%"is_social_only":true%')
+                    ->pluck('user_id')
+                    ->all();
+            }
+
+            $query = \Illuminate\Support\Facades\DB::table($table)
+                ->whereNotNull('password')
+                ->where('password', '!=', '');
+
+            if (!empty($socialOnlyUserIds)) {
+                $query->whereNotIn('id', $socialOnlyUserIds);
+            }
+
+            $query->update(['password_set_at' => now()]);
         }
     }
 

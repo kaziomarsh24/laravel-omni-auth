@@ -51,10 +51,6 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite, bcmath, intl, openssl
           coverage: none
 
-      - name: Configure Composer Security Policy
-        run: |
-          composer config policy.advisories.block false
-
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update

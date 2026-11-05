@@ -74,7 +74,7 @@ Set `routes.enabled` to `false` in `config/omni-auth.php`:
 // config/omni-auth.php
 
 'routes' => [
-    'enabled' => false, // Disables all 29 built-in /api/auth routes
+    'enabled' => false, // Disables all 30 built-in /api/auth routes
     'prefix' => 'api/v1/auth',
     'middleware' => ['api'],
 ],

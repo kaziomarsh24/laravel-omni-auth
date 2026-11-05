@@ -1170,6 +1170,53 @@
               "type": "noauth"
             }
           }
+        },
+        {
+          "name": "Change Password (POST /api/auth/password/change)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"CurrentSecret123!\",\n  \"password\": \"NewSecret123!\",\n  \"password_confirmation\": \"NewSecret123!\",\n  \"logout_others\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/password/change",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "password",
+                "change"
+              ]
+            },
+            "description": "# Change Password (POST /api/auth/password/change)\n\nChanges the authenticated user's password.\n\n- **Route Name**: `omni.password.change`\n- **Authentication**: Authenticated (`omni.auth`)\n\n#### Request Parameters\n| Field | Type | Required | Description | Example |\n| :--- | :--- | :--- | :--- | :--- |\n| `current_password` | `string` | Conditional | Current password (required if user already has password set) | `\"CurrentSecret123!\"` |\n| `password` | `string` | Yes | New password (min 8 characters) | `\"NewSecret123!\"` |\n| `password_confirmation` | `string` | Yes | Confirmation of new password | `\"NewSecret123!\"` |\n| `logout_others` | `boolean` | No | Terminate sessions on other devices | `true` |\n\n#### Success Response: 200 OK\n```json\n{\n  \"ok\": true,\n  \"message\": \"Your password has been changed successfully.\"\n}\n```",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
         }
       ]
     },

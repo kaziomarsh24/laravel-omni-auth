@@ -154,7 +154,7 @@ class OmniAuthServiceProvider extends ServiceProvider
 
                 // Social Authentication & Mobile Native Token Exchange routes
                 Route::prefix('social')->group(function () {
-                    Route::post('/exchange', [Http\Controllers\SocialAuthController::class, 'exchange'])->name('omni.social.exchange');
+                    Route::post('/exchange', [Http\Controllers\SocialAuthController::class, 'exchange'])->middleware('throttle:30,1')->name('omni.social.exchange');
                     Route::get('/{provider}/redirect', [Http\Controllers\SocialAuthController::class, 'redirect'])->name('omni.social.redirect');
                     Route::match(['get', 'post'], '/{provider}/callback', [Http\Controllers\SocialAuthController::class, 'callback'])->name('omni.social.callback');
 
@@ -164,7 +164,7 @@ class OmniAuthServiceProvider extends ServiceProvider
                     });
                 });
 
-                // Password Reset routes
+                // Password Reset & Lifecycle routes
                 Route::post('/forgot-password', [Http\Controllers\PasswordResetController::class, 'forgotPassword'])->name('omni.password.forgot');
                 Route::post('/verify-reset-otp', [Http\Controllers\PasswordResetController::class, 'verifyOtp'])->name('omni.password.verify_otp');
                 Route::post('/reset-password', [Http\Controllers\PasswordResetController::class, 'resetPassword'])->name('omni.password.reset');
@@ -176,8 +176,9 @@ class OmniAuthServiceProvider extends ServiceProvider
                 // Signed Email Verification Link (accessible via browser GET/POST with valid signature)
                 Route::match(['get', 'post'], '/email/verify/{id}/{hash}', [Http\Controllers\VerificationController::class, 'verifyEmail'])->name('omni.email.verify');
 
-                // Email Verification & Account Deletion routes (authenticated)
+                // Authenticated Profile, Verification, Password Change & Account Deletion routes
                 Route::middleware('omni.auth')->group(function () {
+                    Route::post('/password/change', [Http\Controllers\PasswordResetController::class, 'changePassword'])->name('omni.password.change');
                     Route::post('/email/resend', [Http\Controllers\VerificationController::class, 'resendEmail'])->name('omni.email.resend');
                     Route::post('/email/verify', [Http\Controllers\VerificationController::class, 'verifyEmail'])->name('omni.email.verify_otp');
                     Route::delete('/account', [Http\Controllers\VerificationController::class, 'deleteAccount'])->name('omni.account.delete');

@@ -1,14 +1,14 @@
 ---
-title: Complete API Reference (29 Endpoints)
-description: Production-grade reference specifications for all 29 Laravel OmniAuth endpoints including headers, validation rules, dual-mode payloads, and error schemas.
+title: Complete API Reference (30 Endpoints)
+description: Production-grade reference specifications for all 30 Laravel OmniAuth endpoints including headers, validation rules, dual-mode payloads, and error schemas.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-This document provides exhaustive, copy-paste ready technical specifications for all **29 endpoints** registered by Laravel OmniAuth. Every endpoint follows our unified REST schema with explicit parameter rules, header requirements, dual-mode success payloads (Web vs. Mobile), and HTTP error objects.
+This document provides exhaustive, copy-paste ready technical specifications for all **30 endpoints** registered by Laravel OmniAuth. Every endpoint follows our unified REST schema with explicit parameter rules, header requirements, dual-mode success payloads (Web vs. Mobile), and HTTP error objects.
 
 :::tip[Ready-to-Use Postman & Bruno Collection]
-Test all 29 endpoints locally in seconds without manual configuration. Fully compatible with **Postman**, **Bruno**, **Insomnia**, and **Hoppscotch** (via Postman v2.1.0 import).
+Test all 30 endpoints locally in seconds without manual configuration. Fully compatible with **Postman**, **Bruno**, **Insomnia**, and **Hoppscotch** (via Postman v2.1.0 import).
 
 Includes automated token chaining (stores `access_token` and `refresh_token` automatically upon login/challenge), parameter tables, dual-mode payloads, and error response schemas embedded directly in the request docs:
 
@@ -970,6 +970,53 @@ Updates the password using the reset token and revokes all active sessions.
 {
   "ok": true,
   "message": "Your password has been reset successfully. All active sessions have been terminated."
+}
+```
+
+---
+
+### <span class="badge-method badge-post">POST</span> `/api/auth/password/change`
+Changes the authenticated user's password. Verifies current password (if user already has a password set), enforces minimum length, confirms match, prevents same-password reuse, and optionally logs out all other devices.
+
+- **Route Name**: `omni.password.change`
+- **Authentication**: Authenticated (`omni.auth`)
+- **Rate Limit**: 5 attempts per 10 minutes (`omni_pwd_change_attempts:{user_id}`)
+
+#### Request Parameters
+| Field | Type | Required | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| `current_password` | `string` | Conditional | Current password. Required if the user already has a local password set. (Optional for social-only users setting their first password). | `"OldSecret123!"` |
+| `password` | `string` | Yes | New password (minimum 8 characters). | `"NewSecret456!"` |
+| `password_confirmation` | `string` | Yes | Confirmation of new password. Must match `password`. | `"NewSecret456!"` |
+| `logout_others` | `boolean` | No | If `true`, revokes active sessions and refresh tokens on all other devices. Defaults to `false`. | `true` |
+
+#### Success Response: 200 OK
+```json
+{
+  "ok": true,
+  "message": "Your password has been changed successfully."
+}
+```
+
+#### Error Response: 422 Unprocessable Entity (Incorrect Current Password)
+```json
+{
+  "ok": false,
+  "message": "The provided current password does not match our records.",
+  "errors": {
+    "current_password": [
+      "The provided current password does not match our records."
+    ]
+  }
+}
+```
+
+#### Error Response: 429 Too Many Requests (Rate Limit Lockout)
+```json
+{
+  "ok": false,
+  "message": "Too many attempts. Please try again in 599 seconds.",
+  "retry_after": 599
 }
 ```
 

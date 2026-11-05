@@ -143,4 +143,39 @@ class PasswordResetController extends Controller
             ], 422);
         }
     }
+
+    /**
+     * Change or set password for an authenticated user.
+     * Enforces current password verification (if user has a set password),
+     * confirmation match, minimum length, and optional revocation of other device sessions.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureFeatureEnabled()) {
+            return $error;
+        }
+
+        $user = auth(config('omni-auth.guard', 'sanctum'))->user();
+        if (!$user) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        try {
+            return Omni::passwordReset()->changePassword($user, $request);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 }

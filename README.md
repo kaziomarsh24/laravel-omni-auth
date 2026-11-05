@@ -26,8 +26,8 @@ Rolling authentication in Laravel usually starts with Sanctum or Breeze, but pro
 - **Apple RS256 & Google Token Validation**: Strictly enforces RS256 JWKS asymmetric signatures on Apple identity tokens with key-rotation refetch, and validates Google tokens via tokeninfo.
 - **Account Pre-Hijacking Prevention**: Links verified social logins safely; unverified pre-existing passwords and attacker 2FA credentials are automatically purged upon verified social claim.
 - **Constant-Time Timing Attack Defense**: Executes dynamic dummy hash comparisons matching the application's active hasher driver on non-existent users.
-- **29 Production Endpoints**: Turnkey API surface covering credentials, TOTP 2FA, social login, device auditing, magic links, and GDPR account deletion.
-- **Thorough Test Coverage**: 114 automated tests (623 assertions) verifying security, concurrency locks, token rotation, and threat defenses.
+- **30 Production Endpoints**: Turnkey API surface covering credentials, TOTP 2FA, social login, device auditing, password change, magic links, and GDPR account deletion.
+- **Thorough Test Coverage**: 121 automated tests (663 assertions) verifying security, concurrency locks, token rotation, and threat defenses.
 
 ---
 
@@ -60,7 +60,7 @@ Full documentation, interactive multi-client integration guides, and API specifi
 - **[React Native & Expo Client Guide](https://kaziomarsh24.github.io/laravel-omni-auth/clients/react-native-expo/)** — Expo SecureStore, Axios interceptor token chaining, and Apple/Google sign-in.
 
 ### 📚 API Reference & Developer Tools
-- **[Complete API Reference (29 Endpoints)](https://kaziomarsh24.github.io/laravel-omni-auth/reference/api-reference/)** — Specifications, request schemas, dual-mode payloads, and error codes for all 29 endpoints.
+- **[Complete API Reference (30 Endpoints)](https://kaziomarsh24.github.io/laravel-omni-auth/reference/api-reference/)** — Specifications, request schemas, dual-mode payloads, and error codes for all 30 endpoints.
 - **[Postman & Bruno Collection (.json)](https://kaziomarsh24.github.io/laravel-omni-auth/laravel-omni-auth.postman_collection.json)** — Pre-configured collection with automated token chaining and embedded documentation.
 
 ---
@@ -120,7 +120,7 @@ Schedule::command('omni:prune-tokens --days=30')->daily();
 
 ## API Surface Summary
 
-OmniAuth registers 29 production-ready endpoints under `/api/auth`:
+OmniAuth registers 30 production-ready endpoints under `/api/auth`:
 
 | Module | Endpoints |
 | :--- | :--- |
@@ -128,7 +128,7 @@ OmniAuth registers 29 production-ready endpoints under `/api/auth`:
 | **Device Sessions** | `GET /devices`, `DELETE /devices/{id}`, `POST /devices/logout-others`, `POST /devices/fcm` |
 | **2FA (TOTP)** | `POST /2fa/challenge`, `POST /2fa/fallback-otp`, `POST /2fa/setup`, `POST /2fa/confirm`, `POST /2fa/recovery-codes`, `POST /2fa/disable` |
 | **Social Login** | `POST /social/exchange`, `GET /social/{p}/redirect`, `GET\|POST /social/{p}/callback`, `GET /social/accounts`, `DELETE /social/{p}` |
-| **Password Reset** | `POST /forgot-password`, `POST /verify-reset-otp`, `POST /reset-password` |
+| **Password Lifecycle** | `POST /forgot-password`, `POST /verify-reset-otp`, `POST /reset-password`, `POST /password/change` |
 | **Magic Links** | `POST /magic-link`, `GET\|POST /magic-link/verify` |
 | **Lifecycle** | `GET\|POST /email/verify/{id}/{hash}`, `POST /email/verify`, `POST /email/resend`, `DELETE /account` |
 
@@ -143,7 +143,7 @@ composer test
 ```
 
 ```text
-Tests:    114 passed (623 assertions)
+Tests:    121 passed (663 assertions)
 ```
 
 ---

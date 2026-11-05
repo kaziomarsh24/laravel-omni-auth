@@ -9,6 +9,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -555,6 +557,90 @@ class PasswordResetManager
         }
 
         return (bool) $user->delete();
+    }
+
+    /**
+     * Change or set password for an authenticated user.
+     * Enforces rate limiting, current password verification (if user has set a password),
+     * confirmation match, prevents same-password reuse, updates password_set_at,
+     * clears social-only markers, and optionally revokes other devices.
+     */
+    public function changePassword(Authenticatable|Model $user, Request $request): JsonResponse
+    {
+        $userId = $user->getAuthIdentifier();
+        $throttleKey = "omni_pwd_change_attempts:{$userId}";
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'ok' => false,
+                'message' => "Too many attempts. Please try again in {$seconds} seconds.",
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
+        $hasPassword = \KaziOmar\OmniAuth\Facades\Omni::hasUserSetPassword($user);
+
+        // Validation rules
+        $rules = [
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password_confirmation' => ['required', 'string'],
+            'logout_others' => ['nullable', 'boolean'],
+        ];
+
+        if ($hasPassword) {
+            $rules['current_password'] = ['required', 'string'];
+        }
+
+        $validated = $request->validate($rules);
+
+        // Verify current password if user already has a known password set
+        if ($hasPassword) {
+            $currentPassword = (string) $request->input('current_password');
+            if (!Hash::check($currentPassword, $user->password)) {
+                RateLimiter::hit($throttleKey, 600);
+                throw ValidationException::withMessages([
+                    'current_password' => ['The provided current password does not match our records.'],
+                ]);
+            }
+
+            // Reject setting the exact same password
+            if (Hash::check((string) $validated['password'], $user->password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['The new password cannot be the same as your current password.'],
+                ]);
+            }
+        }
+
+        RateLimiter::clear($throttleKey);
+
+        // Update password and record timestamp
+        $user->password = Hash::make((string) $validated['password']);
+        if (\Illuminate\Support\Facades\Schema::hasColumn($user->getTable(), 'password_set_at')) {
+            $user->password_set_at = now();
+        }
+        $user->save();
+
+        // Clear social-only flag in cache and DB if previously flagged
+        $this->forgetCache("omni_social_only_user:{$userId}");
+        $socialAccount = AuthSocialAccount::where('user_id', $userId)->first();
+        if ($socialAccount && !empty($socialAccount->data['is_social_only'])) {
+            $data = (array) $socialAccount->data;
+            unset($data['is_social_only']);
+            $socialAccount->update(['data' => $data]);
+        }
+
+        // Optionally revoke other device sessions and refresh tokens
+        if ($request->boolean('logout_others', false)) {
+            $this->deviceManager->logoutOthers($user, $request);
+        }
+
+        event(new \Illuminate\Auth\Events\PasswordReset($user));
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Your password has been changed successfully.',
+        ]);
     }
 
     /**

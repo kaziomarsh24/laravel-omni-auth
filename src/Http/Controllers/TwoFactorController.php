@@ -110,7 +110,7 @@ class TwoFactorController extends Controller
 
         $hasPassword = Omni::hasUserSetPassword($user);
 
-        // C4: Require re-authentication for initial setup if account has a user-set password
+        // C4 / R2: Require re-authentication for initial setup
         if ($hasPassword) {
             if (!$password || !Hash::check($password, $user->password)) {
                 \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
@@ -119,6 +119,31 @@ class TwoFactorController extends Controller
                     'message' => 'Password confirmation is required to set up two-factor authentication.',
                 ], 422);
             }
+        } elseif ((bool) config('omni-auth.two_factor.reauth_passwordless', false)) {
+            // R2: For passwordless (social-only) accounts, enforce email OTP verification if enabled
+            $otp = $code ?? $request->input('otp');
+            $otpKey = "omni_email_verify_otp_{$user->getAuthIdentifier()}";
+            $hashedOtp = $this->cache()->get($otpKey);
+
+            if (empty($otp)) {
+                Omni::passwordReset()->sendEmailVerificationNotification($user);
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'For passwordless accounts, a verification code has been dispatched to your email. Please provide the code to set up two-factor authentication.',
+                    'requires_code' => true,
+                ], 422);
+            }
+
+            if (!$hashedOtp || !Hash::check(trim((string) $otp), $hashedOtp)) {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Invalid or expired email verification code provided.',
+                ], 422);
+            }
+
+            $this->cache()->forget($otpKey);
         }
 
         // C4: If 2FA is already confirmed and active, require password or code re-auth

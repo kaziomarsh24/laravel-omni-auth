@@ -3,7 +3,7 @@ title: Laravel OmniAuth
 description: Production-grade, dual-mode authentication package for Laravel web and mobile applications.
 template: splash
 hero:
-  tagline: Unified, battle-tested authentication for Web SPAs and Mobile clients. Dual-mode tokens, device tracking, TOTP 2FA, social login, and 29 hardened endpoints out of the box.
+  tagline: Unified, production-grade authentication for Web SPAs and Mobile clients. Dual-mode tokens, device tracking, TOTP 2FA, social login, and 30 hardened endpoints out of the box.
   image:
     file: ../../assets/logo.svg
   actions:
@@ -11,7 +11,7 @@ hero:
       link: /laravel-omni-auth/getting-started/overview/
       icon: right-arrow
       variant: primary
-    - text: API Reference (29 Endpoints)
+    - text: API Reference (30 Endpoints)
       link: /laravel-omni-auth/reference/api-reference/
       icon: document
       variant: secondary
@@ -36,32 +36,32 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     RFC 6238 compliant time-based one-time passwords with encrypted secrets at rest, cryptographically hashed recovery codes, and brute-force lockouts.
   </Card>
   <Card title="Unified Social Authentication" icon="puzzle">
-    Supports traditional OAuth 2.0 redirect flows for web browsers alongside direct native ID token verification for Google and Apple (with live RS256 JWKS validation and strict cache management).
+    Supports traditional OAuth 2.0 redirect flows for web browsers alongside direct native ID token verification for Google (via tokeninfo API) and Apple (with live RS256 JWKS validation and rotation cooldown).
   </Card>
   <Card title="Account Pre-Hijacking Defense" icon="warning">
     Protects user accounts against unverified credential takeover. Pre-existing unverified password registrations linked via verified social providers automatically invalidate prior passwords and revoke stale sessions.
   </Card>
-  <Card title="29 Ready-to-Use Endpoints" icon="rocket">
-    Complete authentication surface covering registration, credential login, passwordless magic links, OTP password resets, device auditing, 2FA management, email verification, and self-service account deletion.
+  <Card title="30 Ready-to-Use Endpoints" icon="rocket">
+    Complete authentication surface covering registration, credential login, passwordless magic links, OTP password resets, authenticated password change, device auditing, 2FA management, email verification, and self-service account deletion.
   </Card>
 </CardGrid>
 
 ## Verified Test Coverage Matrix
 
-Every release of Laravel OmniAuth is verified by an exhaustive automated test suite comprising **101 tests** and **539 assertions** spanning 10 architectural domains. The package has undergone two consecutive rounds of whitebox penetration auditing to ensure full resistance against credential stuffing, token replay, algorithm confusion, and session hijacking.
+Every release of Laravel OmniAuth is verified by an automated test suite comprising **121 tests** and **663 assertions** spanning 10 architectural domains. The package has undergone consecutive rounds of rigorous security auditing to ensure full resistance against credential stuffing, token replay, algorithm confusion, and session hijacking.
 
 | Test Domain | Target Scenarios Verified | Tests / Assertions | Status |
 | :--- | :--- | :---: | :---: |
 | **Dual-Mode Delivery** | Web SameSite HttpOnly cookies vs Mobile Bearer tokens, token abilities isolation, dual-client header detection | 14 tests (78 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Token Rotation & Replay** | Sliding refresh token rotation, replay attack detection, compromised family session invalidation | 6 tests (32 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Two-Factor Auth (TOTP)** | RFC 6238 time drift (±1 window), encrypted secrets at rest, hashed recovery codes, brute-force lockout | 8 tests (54 assertions) | <span class="badge-passed">✓ Passed</span> |
-| **Unified Social Login** | OAuth 2.0 CSRF state validation, Google/Apple native token exchange, RS256 JWKS caching & validation | 6 tests (42 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Unified Social Login** | OAuth 2.0 CSRF state validation, Google/Apple native token exchange, Apple RS256 JWKS caching & rotation cooldown | 7 tests (46 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Pre-Hijacking Defense** | Linking verified social account to unverified password account, auto-invalidation of prior credentials | 4 tests (24 assertions) | <span class="badge-passed">✓ Passed</span> |
-| **Multi-Device Tracking** | Device fingerprinting (OS, browser, IP), FCM & Expo push token syncing, remote session termination | 8 tests (46 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Multi-Device Tracking** | Device fingerprinting (OS, browser, IP), persistent web device cookie, FCM push token syncing, remote session termination | 9 tests (50 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Registration & Hydration** | Dynamic field persistence, mass-assignment guards, case variants, default role assignment | 12 tests (68 assertions) | <span class="badge-passed">✓ Passed</span> |
-| **Passwordless & GDPR** | Cryptographic 6-digit OTPs, signed magic links with host validation, full GDPR account cleanup | 7 tests (38 assertions) | <span class="badge-passed">✓ Passed</span> |
-| **Penetration Security Audits** | Timing attacks, token confusion (HS256 vs RS256), Origin header spoofing, CSRF enforcement, URL tricks | 29 tests (132 assertions) | <span class="badge-passed">✓ Passed</span> |
-| **Concurrency & Hardening** | Atomic token refresh locks, 2FA setup concurrency, recovery code single-use under lock, subquery zero-memory token pruning | 7 tests (25 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Passwordless & GDPR** | Cryptographic 6-digit OTPs, signed magic links with host validation, full GDPR account cleanup via forceDelete | 7 tests (38 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Security Audits & Hardening** | Legacy user password checks, timing attacks, token abilities enforcement, Origin header spoofing, CSRF enforcement, URL validation | 46 tests (244 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Concurrency & Token Rotation** | Atomic token refresh locks, 429 Retry-After without cookie loss, 2FA setup concurrency, zero-memory token pruning | 8 tests (29 assertions) | <span class="badge-passed">✓ Passed</span> |
 
 :::tip[Run Tests Locally]
 You can execute the entire test suite locally in your terminal at any time:

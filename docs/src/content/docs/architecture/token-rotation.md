@@ -12,7 +12,7 @@ To maintain high security without forcing users to re-enter passwords daily, Omn
 When a client receives tokens, two distinct token records are generated in Laravel Sanctum:
 
 1. **Access Token**: Short-lived (default 15 minutes) with full API abilities `['access-api']`.
-2. **Refresh Token**: Long-lived (default 30 days) with restricted ability `['refresh']`.
+2. **Refresh Token**: Long-lived (default 30 days) with restricted ability `['issue-access-token']`.
 
 ```mermaid
 sequenceDiagram
@@ -44,10 +44,10 @@ sequenceDiagram
 
 ### Single-Use Refresh Tokens & Atomic Concurrency Guard
 Refresh tokens are strictly single-use. When [`POST /api/auth/refresh`](/laravel-omni-auth/reference/api-reference/#post-apiauthrefresh) is called:
-- **Atomic Concurrency Lock**: OmniAuth acquires an atomic lock on the refresh token hash (`omni_refresh_lock:<hash>`). If mobile network instability causes duplicate concurrent refresh requests to arrive simultaneously, only one request executes while the other receives `HTTP 429 Too Many Requests`, preventing race conditions and duplicate token issuance.
+- **Atomic Concurrency Lock**: OmniAuth acquires an atomic lock on the refresh token hash (`omni_refresh_lock:<hash>`). If mobile network instability or concurrent browser tabs cause duplicate refresh requests to arrive simultaneously, only one request executes while the other receives `HTTP 429 Too Many Requests` with a `Retry-After: 1` header. Critically, browser cookies are preserved on 429 responses, preventing accidental session logouts.
 - **Immediate Burn**: The existing refresh token is immediately deleted from the database.
 - **Sliding Renewal**: A fresh short-lived access token (default 15 mins) and a new sliding refresh token (default 30 days) are issued.
-- **Replay Attack Detection**: Rotated token hashes are recorded in the cache within a lightweight 15-minute detection window (`replay_detection_ttl`). If an attacker attempts to replay an already burned refresh token, OmniAuth immediately triggers an **Account-Wide Security Lockout**, terminating all active sessions for that account.
+- **Replay Attack Detection**: Rotated token hashes are recorded in the cache within a configurable detection window (`replay_detection_ttl`, default 15 minutes). If an attacker attempts to replay an already burned refresh token, OmniAuth immediately triggers an **Account-Wide Security Lockout**, terminating all active sessions for that account.
 
 ---
 
@@ -59,10 +59,10 @@ Every authenticated session is tracked in the `auth_devices` database table:
 | :--- | :--- |
 | `id` | Unique primary key for the device session |
 | `user_id` | Foreign key referencing the authenticated user |
-| `device_id` | Unique client-provided hardware or installation UUID |
+| `device_id` | Client-provided hardware UUID or persistent `omni_device_id` web cookie |
 | `platform` | Operating system (`ios`, `android`, `web`, `windows`, `macos`) |
 | `device_name` | Human-readable label (e.g., "iPhone 15 Pro", "Chrome on macOS") |
-| `browser` | Detected browser engine or app bundle |
+| *(computed)* `browser` | Dynamically parsed from User-Agent string during serialization |
 | `ip_address` | Client IP address at time of authentication |
 | `fcm_token` | Optional Firebase Cloud Messaging push token (see [Universal Push Tokens](/laravel-omni-auth/features/device-management/#4-update-push-notification-token-fcm--apns--expo)) |
 | `refresh_token_id` | Foreign key linking this device to its active refresh token |

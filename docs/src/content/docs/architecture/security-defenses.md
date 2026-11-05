@@ -23,8 +23,8 @@ Sanctum::authenticateAccessTokensUsing(function (PersonalAccessToken $token, boo
         return null;
     }
 
-    // Refresh tokens are strictly prohibited from authenticating general API routes
-    if ($token->can('refresh') && ! request()->is('*/auth/refresh')) {
+    // Refresh tokens (bearing issue-access-token ability) cannot authenticate standard API routes
+    if (in_array('issue-access-token', (array) $token->abilities, true) && ! request()->is('*/auth/refresh')) {
         return null;
     }
 
@@ -65,13 +65,15 @@ In `OmniAuthManager`:
 
 ```php
 if (! $user) {
-    // Constant-time dummy verification
-    Hash::check($password, '$2y$10$e8wZ3oIqK8mD4V2Y0J6N7eX1wZ9y8x7v6u5t4s3r2q1p0o9n8m7l6');
+    // Constant-time dummy verification matching active hasher driver & cost
+    Hash::check($password, $this->getDummyPasswordHash());
     return null;
 }
 ```
 
-Whether an email exists or not, the server always executes a full bcrypt operation, keeping response times statistically identical (~235ms vs ~259ms).
+Whether an email exists or not, the server always executes a full cryptographic hashing operation matching the application's active driver (`bcrypt`, `argon2i`, or `argon2id`).
+
+> **Persistent Cache Recommendation:** To maintain exact timing parity between existing and non-existent accounts, ensure a persistent cache driver (Redis, Memcached, Database) is configured so the generated dummy hash is remembered without per-request overhead.
 
 ---
 
@@ -85,8 +87,8 @@ Password reset links and OAuth callbacks accept destination URLs. Attackers use 
 ### The Mitigation
 In `PasswordResetManager::validateRedirectUrl()`:
 - URLs containing `\` or `@` characters are instantly rejected with HTTP 422.
-- The target hostname is parsed and verified against `config('app.url')` and an explicit allowed hosts whitelist.
-- Subdomain wildcards are strictly validated against period-delimited host boundaries.
+- The target hostname is parsed and verified for an **exact match** against `config('app.url')` and any hostnames explicitly listed in `config('omni-auth.allowed_redirect_hosts')`.
+- Mobile custom deep link schemes (e.g. `myapp://`) are accepted only when declared in `config('omni-auth.magic_link.allowed_schemes')`.
 - `localhost` redirects are prohibited in production and staging environments, allowed only when `app.env === 'local'` or `'testing'`.
 
 ---
@@ -118,3 +120,13 @@ To prevent distributed credential stuffing where attackers use botnets to submit
 2. **Global Account Limit**: Up to 20 failed attempts against any single email address across all combined IP addresses within a 15-minute sliding window.
 
 If an account is targeted by a distributed attack, global rate limiting locks the account independently of the attacking IP addresses.
+
+---
+
+## 7. Passwordless Account Re-Auth & GDPR Deletion
+
+### Passwordless Re-Authentication (R2 Mitigation)
+When a social-only user (without a local password) initiates two-factor authentication setup or account changes, OmniAuth prevents attackers with a stolen access token from taking over the account by requiring email verification OTP re-authentication (`omni-auth.two_factor.reauth_passwordless`).
+
+### GDPR-Compliant Account Deletion
+`DELETE /api/auth/account` enforces complete cascading cleanup of tokens, device records, 2FA credentials, and social links. If the configured User model uses the `Illuminate\Database\Eloquent\SoftDeletes` trait, OmniAuth enforces `forceDelete()` to guarantee full compliance with GDPR Right to Erasure and Apple App Store Guideline 5.1.1(v).

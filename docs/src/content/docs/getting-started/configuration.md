@@ -206,36 +206,74 @@ For timing attack analysis and IP vs account decay algorithms, consult the [Secu
 
 ---
 
-## Registration & Auto-Login Flow
+## Registration & Mass-Assignment Protection
 
-Control onboarding friction and role assignment:
+Control onboarding friction, role assignment, and attribute security:
 
 ```php
 'registration' => [
     'auto_login' => env('OMNI_REGISTRATION_AUTO_LOGIN', true),
     'default_role' => env('OMNI_REGISTRATION_DEFAULT_ROLE', null),
     'rules' => null, // null uses dynamic schema rules based on identifier_column
+    'allowed_attributes' => ['name', 'email', 'phone', 'username'], // Strict whitelist
+    'guarded' => ['is_admin', 'role', 'roles', 'permissions', 'email_verified_at'], // Blacklist
 ],
 ```
 
 - When `auto_login => true` (default), users receive authentication tokens immediately upon registration with `email_verified_at = null` (Frictionless Onboarding).
 - When `auto_login => false`, tokens are withheld until the user verifies their email via OTP or signed link (Strict Gatekeeper mode).
+- Input keys are normalized to lowercase prior to applying filtering rules to prevent case-variant mass assignment bypasses (e.g. `{"Is_Admin": true}`).
 - To define custom validation rules or custom user hydration logic, see [Custom Validation Rules](/laravel-omni-auth/getting-started/customization/#customizing-registration-rules).
 
 ---
 
 ## Two-Factor Authentication (2FA)
 
-Configure TOTP app issuers and challenge token validity:
+Configure TOTP app issuers, challenge token validity, and passwordless re-authentication:
 
 ```php
 'two_factor' => [
     'issuer' => env('OMNI_2FA_ISSUER', null), // null defaults to config('app.name')
     'challenge_ttl' => env('OMNI_2FA_CHALLENGE_TTL', 5), // minutes
+    'reauth_passwordless' => env('OMNI_2FA_REAUTH_PASSWORDLESS', false), // require email OTP for passwordless accounts
 ],
 ```
 
-For QR code generation, recovery codes, and SMS fallback workflows, explore the [Two-Factor Authentication Guide](/laravel-omni-auth/features/two-factor-auth/).
+- When `reauth_passwordless => true`, passwordless accounts (e.g. pure social signups without a local password) must confirm an email verification OTP before configuring TOTP 2FA.
+- For QR code generation, recovery codes, and SMS fallback workflows, explore the [Two-Factor Authentication Guide](/laravel-omni-auth/features/two-factor-auth/).
+
+---
+
+## Redirect Host Whitelisting & Mobile Custom Schemes
+
+Prevent open redirect vulnerabilities on password reset links, OAuth callbacks, and magic links:
+
+```php
+// Whitelist external frontend hostnames (e.g. separate SPA domain)
+'allowed_redirect_hosts' => [
+    'frontend.example.com',
+    'admin.example.com',
+],
+
+'magic_link' => [
+    'ttl' => env('OMNI_MAGIC_LINK_TTL', 15),
+    // Allowed mobile app custom schemes for deep linking
+    'allowed_schemes' => ['myapp', 'exp'],
+],
+```
+
+- Target hostnames must exactly match `config('app.url')` host or a hostname listed in `allowed_redirect_hosts`.
+- Mobile deep link URLs like `myapp://auth/callback` are permitted only when their scheme is registered in `allowed_schemes`.
+
+---
+
+## Database Migrations & Host Application Schema
+
+OmniAuth publishes migrations that create package tables (`auth_devices`, `auth_two_factors`, `auth_social_accounts`) and safely extends the host application's user table:
+
+- **Migration `000004`**: Adds `refresh_token_id` to `auth_devices` to link tracked physical hardware with Sanctum refresh tokens.
+- **Migration `000005`**: Adds nullable `password_set_at` timestamp to the configured `users` table (`config('omni-auth.user_model')`). When executed, it automatically backfills `password_set_at = now()` for existing users who already possess a local password, distinguishing them from passwordless social signups.
+- **GDPR Deletion**: `DELETE /api/auth/account` enforces `forceDelete()` if the User model uses `SoftDeletes`, ensuring complete removal of account data.
 
 ---
 
@@ -310,6 +348,6 @@ Control URL prefix and route registration:
 ],
 ```
 
-- When `enabled => true`, all 29 production endpoints are automatically registered at `/api/auth/*`.
+- When `enabled => true`, all 30 production endpoints are automatically registered at `/api/auth/*`.
 - When `enabled => false`, built-in routing is completely disabled. You can build custom controllers using the `Omni` Facade (`Omni::attempt()`, `Omni::issueTokenResponse()`). See [Headless Mode](/laravel-omni-auth/getting-started/customization/#headless-mode-building-custom-routes).
 

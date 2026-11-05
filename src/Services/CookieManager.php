@@ -105,6 +105,7 @@ class CookieManager
         return [
             config('omni-auth.cookie.name', 'omni_access_token'),
             config('omni-auth.cookie.refresh_name', 'omni_refresh_token'),
+            config('omni-auth.cookie.device_name', 'omni_device_id'),
         ];
     }
 

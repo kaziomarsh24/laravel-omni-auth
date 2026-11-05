@@ -305,10 +305,14 @@ class SocialAuthManager
             if ($cachedJwks && is_array($cachedJwks)) {
                 $jwks = $cachedJwks;
                 $matchingKey = $this->findAppleKeyByKid($jwks, $header['kid'] ?? '');
-                // If key not found in cache, Apple may have rotated keys — refresh from Apple
+                // If key not found in cache, Apple may have rotated keys — refresh from Apple with cooldown to prevent outbound DoS
                 if (!$matchingKey) {
-                    $jwks = $this->fetchAppleJwks();
-                    $matchingKey = $this->findAppleKeyByKid($jwks, $header['kid'] ?? '');
+                    $cooldownKey = 'omni_apple_jwks_refetch_cooldown';
+                    if (!$this->cache()->has($cooldownKey)) {
+                        $jwks = $this->fetchAppleJwks();
+                        $this->cache()->put($cooldownKey, true, now()->addMinutes(5));
+                        $matchingKey = $this->findAppleKeyByKid($jwks, $header['kid'] ?? '');
+                    }
                 }
             } else {
                 $jwks = $this->fetchAppleJwks();
@@ -485,7 +489,7 @@ class SocialAuthManager
         $lock = $this->cache()->lock($lockKey, 15);
 
         return $lock->block(5, function () use ($provider, $profile, $providerId) {
-            $email = $profile['email'] ?? null;
+            $email = !empty($profile['email']) ? strtolower(trim((string) $profile['email'])) : null;
 
             // 1. Look for existing linked social account
             /** @var AuthSocialAccount|null $socialAccount */
@@ -494,13 +498,18 @@ class SocialAuthManager
                 ->first();
 
             if ($socialAccount) {
+                // Merge new profile data with existing record to avoid wiping is_social_only metadata
+                $existingData = (array) ($socialAccount->data ?? []);
+                $newData = (array) ($profile['data'] ?? []);
+                $mergedData = array_merge($existingData, $newData);
+
                 // Update token or avatar if available
                 $socialAccount->update(array_filter([
                     'token' => $profile['token'] ?? null,
                     'refresh_token' => $profile['refresh_token'] ?? null,
                     'avatar' => $profile['avatar'] ?? null,
-                    'data' => $profile['data'] ?? null,
-                ]));
+                    'data' => $mergedData,
+                ], fn($v) => $v !== null));
 
                 return $socialAccount->user;
             }
