@@ -7,7 +7,7 @@ Modern multi-platform apps need two distinct social login strategies:
 1. **Web Browsers**: Standard OAuth 2.0 redirect flows with CSRF state verification.
 2. **Mobile Apps**: Native SDK sign-in (e.g., `google_sign_in` or `sign_in_with_apple` in Flutter/React Native) that yields an `id_token` directly on the device, requiring backend verification without redirect hops.
 
-OmniAuth handles both flows seamlessly.
+OmniAuth handles both flows out of the box.
 
 ---
 

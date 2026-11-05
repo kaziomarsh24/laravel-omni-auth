@@ -221,8 +221,8 @@ Control onboarding friction, role assignment, and attribute security:
 ],
 ```
 
-- When `auto_login => true` (default), users receive authentication tokens immediately upon registration with `email_verified_at = null` (Frictionless Onboarding).
-- When `auto_login => false`, tokens are withheld until the user verifies their email via OTP or signed link (Strict Gatekeeper mode).
+- When `auto_login => true` (default), users receive authentication tokens immediately upon registration with `email_verified_at = null`.
+- When `auto_login => false`, tokens are withheld until the user verifies their email via OTP or signed link.
 - Input keys are normalized to lowercase prior to applying filtering rules to prevent case-variant mass assignment bypasses (e.g. `{"Is_Admin": true}`).
 - To define custom validation rules or custom user hydration logic, see [Custom Validation Rules](/laravel-omni-auth/getting-started/customization/#customizing-registration-rules).
 

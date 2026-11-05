@@ -153,7 +153,7 @@ Future<Map<String, dynamic>?> exchangeSocialToken({
 
 ## Push Notification Sync (FCM & APNs)
 
-Synchronize your Firebase or APNs push token effortlessly:
+Synchronize your Firebase or APNs push token with the active device session:
 
 ```dart
 Future<void> syncPushToken(String token) async {

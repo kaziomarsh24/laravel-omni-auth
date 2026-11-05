@@ -53,8 +53,8 @@ The following diagram illustrates how OmniAuth handles requests across different
 ```mermaid
 graph TD
     subgraph Clients["Supported Client Platforms"]
-        Web["🌐 Web SPA (Next.js / Vue / Nuxt)<br/>SameSite HttpOnly Cookies<br/>Custom Anti-CSRF Header"]
-        Mobile["📱 Mobile App (Flutter / React Native / iOS / Android)<br/>Authorization: Bearer &lt;token&gt;<br/>X-Client-Type: mobile"]
+        Web["Web SPA (Next.js / Vue / Nuxt)<br/>SameSite HttpOnly Cookies<br/>Custom Anti-CSRF Header"]
+        Mobile["Mobile App (Flutter / React Native / iOS / Android)<br/>Authorization: Bearer &lt;token&gt;<br/>X-Client-Type: mobile"]
     end
 
     subgraph Core["Laravel OmniAuth Core Engine"]

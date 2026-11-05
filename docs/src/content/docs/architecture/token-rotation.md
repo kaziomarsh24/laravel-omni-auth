@@ -25,7 +25,7 @@ sequenceDiagram
     Backend->>DB: Stores Access Token A (15m) & Refresh Token R1 (30d)
     Backend-->>Client: Returns Token A + Token R1
 
-    Note over Client: 15 minutes elapse — Token A expires
+    Note over Client: 15 minutes elapse (Token A expires)
     Client->>Backend: GET /api/user (Bearer Token A)
     Backend-->>Client: 401 Unauthorized (Token expired)
 

@@ -20,8 +20,8 @@ The authentication pipeline automatically determines token delivery semantics us
 flowchart TD
     Start(["Incoming Auth Request (/login, /register, /social)"]) --> Detect{"Is X-Client-Type: mobile<br/>or Mobile User-Agent?"}
 
-    Detect -- Yes --> Mobile["📱 Mobile Delivery Mode"]
-    Detect -- No --> Web["🌐 Web / SPA Delivery Mode"]
+    Detect -- Yes --> Mobile["Mobile Delivery Mode"]
+    Detect -- No --> Web["Web / SPA Delivery Mode"]
 
     Mobile --> MobileJSON["Returns Tokens in JSON Body:<br/>• access_token (short-lived Bearer)<br/>• refresh_token (sliding rotation)<br/>• expires_in: 900"]
     MobileJSON --> MobileStore["Client Persists Securely:<br/>• Flutter: flutter_secure_storage (Keychain/Keystore)<br/>• React Native: expo-secure-store"]
@@ -32,11 +32,11 @@ flowchart TD
 
 ---
 
-## 4-Tier Client Detection Hierarchy
+## Client Detection Priority
 
-OmniAuth evaluates incoming requests deterministically in the following strict order:
+OmniAuth evaluates incoming requests deterministically in the following order:
 
-1. **Explicit Header (`X-Client-Type`) — Highest Priority**:
+1. **Explicit Header (`X-Client-Type`) (Highest Priority)**:
    - `X-Client-Type: mobile` → Delivers tokens directly in JSON body.
    - `X-Client-Type: web` → Sets secure SameSite HttpOnly cookies.
 2. **Bearer Authorization Header (`Authorization: Bearer ...`)**:

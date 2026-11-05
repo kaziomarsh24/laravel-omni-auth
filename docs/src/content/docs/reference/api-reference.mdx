@@ -189,8 +189,8 @@ Registers a new user record, assigns configured default roles, and processes aut
 :::note[Registration Flow & Email Verification Architecture]
 OmniAuth supports two distinct industry patterns for registration:
 
-1. **Frictionless Onboarding (`auto_login => true`, Default):**
-   The user account is created with `email_verified_at = null`, a background email verification notification is dispatched, and the user is authenticated immediately (via HttpOnly cookies for Web SPAs or Bearer tokens for mobile). This eliminates onboarding drop-off while allowing developers to restrict sensitive actions with the `omni.auth` and `verified` route middleware (`Route::middleware(['omni.auth', 'verified'])`).
+1. **Immediate Login (`auto_login => true`, default):**
+   The user account is created with `email_verified_at = null`, a background email verification notification is dispatched, and the user is authenticated immediately (via HttpOnly cookies for Web SPAs or Bearer tokens for mobile). This lets users explore the app right away while allowing developers to restrict sensitive actions with the `omni.auth` and `verified` route middleware (`Route::middleware(['omni.auth', 'verified'])`).
 2. **Strict Verification-First (`auto_login => false`):**
    Configured via `config/omni-auth.php` (`'auto_login' => false`) or `OMNI_REGISTRATION_AUTO_LOGIN=false`. OmniAuth creates the user record and dispatches verification, but returns **zero tokens** and sets **zero cookies**. The client must verify their email before they can log in via `/api/auth/login`.
 :::

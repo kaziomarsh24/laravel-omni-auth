@@ -12,10 +12,10 @@ OmniAuth includes complete flows for email verification and self-service account
 :::note[Registration Flow & Email Verification Architecture]
 Modern SaaS and mobile applications (e.g., GitHub, Twitter/X, Spotify, Netflix) face a critical tradeoff between user drop-off and account security. OmniAuth accommodates both industry architectures:
 
-1. **Frictionless Onboarding (Package Default — Recommended UX):**
+1. **Immediate Login (Default):**
    - By default (`'auto_login' => true`), upon calling [`POST /api/auth/register`](/laravel-omni-auth/reference/api-reference/#post-apiauthregister), OmniAuth immediately returns authentication tokens (or sets HttpOnly cookies) and dispatches a background verification email.
-   - The user is logged in immediately (`email_verified_at = null`), allowing them to explore onboarding tours or public app areas without friction.
-   - Sensitive or billing endpoints should be protected using the `omni.auth` and `verified` middleware (`Route::middleware(['omni.auth', 'verified'])`), which blocks unverified users with HTTP 403 until they complete verification.
+   - The user is logged in immediately (`email_verified_at = null`), allowing them to explore onboarding tours or public app areas.
+   - Sensitive or billing endpoints can be protected using the `omni.auth` and `verified` middleware (`Route::middleware(['omni.auth', 'verified'])`), which blocks unverified users with HTTP 403 until they complete verification.
 
 2. **Strict Verification-First Flow (Regulated / High-Security Apps):**
    - If your application strictly requires verification before any session is issued (e.g., banking, healthcare, government), set `'auto_login' => false` in `config/omni-auth.php` (or `OMNI_REGISTRATION_AUTO_LOGIN=false` in `.env`).
