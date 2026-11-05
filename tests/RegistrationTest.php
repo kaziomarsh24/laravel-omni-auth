@@ -109,6 +109,8 @@ class RegistrationTest extends TestCase
 
     public function test_dynamic_auto_hydration_persists_custom_arbitrary_fields(): void
     {
+        config()->set('omni-auth.registration.allowed_attributes', ['name', 'email', 'phone', 'company']);
+
         $payload = [
             'name' => 'Eli Vance',
             'email' => 'eli@blackmesa.com',
