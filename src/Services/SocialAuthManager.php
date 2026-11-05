@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use KaziOmar\OmniAuth\Events\SocialAccountLinked;
+use KaziOmar\OmniAuth\Events\SocialAccountUnlinked;
 use KaziOmar\OmniAuth\Features;
 use KaziOmar\OmniAuth\Models\AuthDevice;
 use KaziOmar\OmniAuth\Models\AuthSocialAccount;
@@ -558,6 +560,8 @@ class SocialAuthManager
                         'data' => $profile['data'] ?? null,
                     ]);
 
+                    event(new SocialAccountLinked($existingUser, $provider));
+
                     return $existingUser;
                 }
             }
@@ -632,9 +636,15 @@ class SocialAuthManager
             throw new InvalidArgumentException('Cannot unlink provider: Account has no password set or secondary authentication method.');
         }
 
-        return (bool) AuthSocialAccount::where('user_id', $user->getAuthIdentifier())
+        $deleted = (bool) AuthSocialAccount::where('user_id', $user->getAuthIdentifier())
             ->where('provider', $provider)
             ->delete();
+
+        if ($deleted) {
+            event(new SocialAccountUnlinked($user, $provider));
+        }
+
+        return $deleted;
     }
 
     /**

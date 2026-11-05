@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use KaziOmar\OmniAuth\Events\TwoFactorDisabled;
+use KaziOmar\OmniAuth\Events\TwoFactorEnabled;
 use KaziOmar\OmniAuth\Models\AuthTwoFactor;
 
 class TwoFactorManager
@@ -99,6 +101,7 @@ class TwoFactorManager
                     ]
                 );
                 $this->forgetCache("omni_2fa_pending_{$userId}");
+                event(new TwoFactorEnabled($user));
                 return true;
             }
             return false;
@@ -113,6 +116,7 @@ class TwoFactorManager
 
         if ($this->verifyCode($twoFactor->secret, trim($code))) {
             $twoFactor->update(['confirmed_at' => now()]);
+            event(new TwoFactorEnabled($user));
             return true;
         }
 
@@ -124,7 +128,13 @@ class TwoFactorManager
      */
     public function disable(Authenticatable|Model $user): bool
     {
-        return (bool) AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->delete();
+        $deleted = (bool) AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->delete();
+
+        if ($deleted) {
+            event(new TwoFactorDisabled($user));
+        }
+
+        return $deleted;
     }
 
     /**

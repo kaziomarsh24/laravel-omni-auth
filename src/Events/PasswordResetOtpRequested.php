@@ -11,9 +11,13 @@ class PasswordResetOtpRequested
 {
     use SerializesModels;
 
+    public ?string $signedUrl = null;
+
     public function __construct(
         public Authenticatable $user,
         public string $otp,
         public ?string $resetUrl = null
-    ) {}
+    ) {
+        $this->signedUrl = $resetUrl;
+    }
 }

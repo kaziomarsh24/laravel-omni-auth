@@ -24,6 +24,7 @@ use Illuminate\Validation\ValidationException;
 use KaziOmar\OmniAuth\Events\AccountDeleted;
 use KaziOmar\OmniAuth\Events\EmailVerificationRequested;
 use KaziOmar\OmniAuth\Events\MagicLinkRequested;
+use KaziOmar\OmniAuth\Events\PasswordChanged;
 use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
 use KaziOmar\OmniAuth\Models\AuthDevice;
 use KaziOmar\OmniAuth\Models\AuthSocialAccount;
@@ -213,6 +214,7 @@ class PasswordResetManager
         AuthDevice::where('user_id', $user->getAuthIdentifier())->delete();
 
         event(new \Illuminate\Auth\Events\PasswordReset($user));
+        event(new PasswordChanged($user));
 
         return true;
     }
@@ -636,6 +638,7 @@ class PasswordResetManager
         }
 
         event(new \Illuminate\Auth\Events\PasswordReset($user));
+        event(new PasswordChanged($user));
 
         return response()->json([
             'ok' => true,

@@ -11,9 +11,13 @@ class EmailVerificationRequested
 {
     use SerializesModels;
 
+    public string $signedUrl;
+
     public function __construct(
         public Authenticatable $user,
         public string $verificationUrl,
         public ?string $otp = null
-    ) {}
+    ) {
+        $this->signedUrl = $verificationUrl;
+    }
 }

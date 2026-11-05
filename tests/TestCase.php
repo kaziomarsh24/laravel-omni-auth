@@ -137,7 +137,7 @@ abstract class TestCase extends Orchestra
 
 class TestUser extends Authenticatable implements MustVerifyEmail
 {
-    use \KaziOmar\OmniAuth\Traits\HasOmniAuth, MustVerifyEmailTrait;
+    use \KaziOmar\OmniAuth\Traits\HasOmniAuth, MustVerifyEmailTrait, \Illuminate\Notifications\Notifiable;
 
     protected $table = 'users';
 

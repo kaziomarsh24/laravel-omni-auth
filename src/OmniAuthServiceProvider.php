@@ -6,6 +6,7 @@ namespace KaziOmar\OmniAuth;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use KaziOmar\OmniAuth\Http\Middleware\OmniAuthenticate;
@@ -112,6 +113,9 @@ class OmniAuthServiceProvider extends ServiceProvider
         if (config('omni-auth.routes.enabled', true)) {
             $this->registerRoutes();
         }
+
+        // Register default notification event listeners if enabled
+        $this->registerNotificationListeners();
     }
 
     /**
@@ -184,5 +188,65 @@ class OmniAuthServiceProvider extends ServiceProvider
                     Route::delete('/account', [Http\Controllers\VerificationController::class, 'deleteAccount'])->name('omni.account.delete');
                 });
             });
+    }
+
+    /**
+     * Register default notification event listeners if enabled.
+     */
+    protected function registerNotificationListeners(): void
+    {
+        if (!config('omni-auth.notifications.enabled', true)) {
+            return;
+        }
+
+        Event::listen(
+            Events\PasswordResetOtpRequested::class,
+            Listeners\SendPasswordResetOtpNotification::class
+        );
+
+        Event::listen(
+            Events\EmailVerificationRequested::class,
+            Listeners\SendVerifyEmailNotification::class
+        );
+
+        Event::listen(
+            Events\MagicLinkRequested::class,
+            Listeners\SendMagicLinkNotification::class
+        );
+
+        Event::listen(
+            Events\TwoFactorFallbackOtpRequested::class,
+            Listeners\SendTwoFactorFallbackOtpNotification::class
+        );
+
+        Event::listen(
+            Events\PasswordChanged::class,
+            Listeners\SendPasswordChangedNotification::class
+        );
+
+        Event::listen(
+            Events\TwoFactorEnabled::class,
+            [Listeners\SendTwoFactorStatusNotification::class, 'handleEnabled']
+        );
+
+        Event::listen(
+            Events\TwoFactorDisabled::class,
+            [Listeners\SendTwoFactorStatusNotification::class, 'handleDisabled']
+        );
+
+        Event::listen(
+            Events\SocialAccountLinked::class,
+            Listeners\SendSocialAccountLinkedNotification::class
+        );
+
+        Event::listen(
+            Events\SocialAccountUnlinked::class,
+            Listeners\SendSocialAccountUnlinkedNotification::class
+        );
+
+        Event::listen(
+            Events\AccountDeleted::class,
+            Listeners\SendAccountDeletedNotification::class
+        );
     }
 }

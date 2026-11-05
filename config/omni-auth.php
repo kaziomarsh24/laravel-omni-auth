@@ -240,4 +240,46 @@ return [
         'prefix' => env('OMNI_ROUTES_PREFIX', 'api/auth'),
         'middleware' => ['api'],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification & Alert Delivery
+    |--------------------------------------------------------------------------
+    | OmniAuth includes batteries-included, beautifully formatted Markdown email
+    | notifications out of the box for all authentication milestones and security alerts.
+    |
+    | When enabled, default listeners automatically dispatch notifications.
+    | Set 'enabled' to false if you prefer handling delivery exclusively via
+    | your own custom event listeners (e.g. SMS, WhatsApp, custom mailers).
+    */
+    'notifications' => [
+        'enabled' => env('OMNI_NOTIFICATIONS_ENABLED', true),
+        'channels' => ['mail'],
+
+        // Customizable Notification classes (override any class with your own)
+        'classes' => [
+            'password_reset_otp' => \KaziOmar\OmniAuth\Notifications\ResetPasswordOtpNotification::class,
+            'verify_email' => \KaziOmar\OmniAuth\Notifications\VerifyEmailNotification::class,
+            'magic_login_link' => \KaziOmar\OmniAuth\Notifications\MagicLoginLinkNotification::class,
+            'two_factor_fallback_otp' => \KaziOmar\OmniAuth\Notifications\TwoFactorFallbackOtpNotification::class,
+            'password_changed' => \KaziOmar\OmniAuth\Notifications\PasswordChangedNotification::class,
+            'two_factor_status' => \KaziOmar\OmniAuth\Notifications\TwoFactorStatusChangedNotification::class,
+            'social_account_linked' => \KaziOmar\OmniAuth\Notifications\SocialAccountLinkedNotification::class,
+            'social_account_unlinked' => \KaziOmar\OmniAuth\Notifications\SocialAccountUnlinkedNotification::class,
+            'account_deleted' => \KaziOmar\OmniAuth\Notifications\AccountDeletedNotification::class,
+        ],
+
+        // Toggle individual notifications if needed
+        'toggles' => [
+            'password_reset_otp' => true,
+            'verify_email' => true,
+            'magic_login_link' => true,
+            'two_factor_fallback_otp' => true,
+            'password_changed' => true,
+            'two_factor_status' => true,
+            'social_account_linked' => true,
+            'social_account_unlinked' => true,
+            'account_deleted' => true,
+        ],
+    ],
 ];
