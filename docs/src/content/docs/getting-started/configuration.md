@@ -19,6 +19,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_TREAT_BEARER_AS_MOBILE` | `client_detection.treat_bearer_as_mobile` | `true` | When `true`, requests with `Authorization: Bearer` headers are automatically classified as API/Mobile clients. | [Dual-Mode Tokens](/laravel-omni-auth/architecture/dual-mode-tokens/) |
 | `OMNI_COOKIE_NAME` | `cookie.name` | `'omni_access_token'` | Name of the encrypted HttpOnly access token cookie. | [Dual-Mode Tokens](/laravel-omni-auth/architecture/dual-mode-tokens/) |
 | `OMNI_REFRESH_COOKIE_NAME` | `cookie.refresh_name` | `'omni_refresh_token'` | Name of the encrypted HttpOnly refresh token cookie. | [Token Rotation](/laravel-omni-auth/architecture/token-rotation/) |
+| `OMNI_DEVICE_COOKIE_NAME` | `cookie.device_name` | `'omni_device_id'` | Device tracking cookie name for browser fingerprinting. | [Device Tracking](/laravel-omni-auth/features/device-management/) |
 | `OMNI_COOKIE_DOMAIN` | `cookie.domain` | `null` | Cookie domain (e.g. `'.example.com'` for cross-subdomain SSO). | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_COOKIE_SECURE` | `cookie.secure` | `null` | Forces HTTPS-only cookies (`null` auto-detects request protocol). | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_COOKIE_SAMESITE` | `cookie.same_site` | `'lax'` | Cookie SameSite enforcement (`'lax'`, `'strict'`, or `'none'`). | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
@@ -42,6 +43,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_DEFAULT_ROLE` | `default_role` | `null` | Global default Spatie role assigned upon user creation across all adapters. | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_2FA_ISSUER` | `two_factor.issuer` | `null` | App name displayed in Authenticator apps (defaults to `config('app.name')`). | [Two-Factor Authentication](/laravel-omni-auth/features/two-factor-auth/) |
 | `OMNI_2FA_CHALLENGE_TTL` | `two_factor.challenge_ttl` | `5` | Lifespan in minutes of intermediate `2fa_token` before challenge expires. | [Two-Factor Authentication](/laravel-omni-auth/features/two-factor-auth/) |
+| `OMNI_2FA_FALLBACK_OTP_TTL` | `two_factor.fallback_otp_ttl` | `5` | Lifespan in minutes of 2FA backup OTP sent via email. | [Two-Factor Authentication](/laravel-omni-auth/features/two-factor-auth/) |
 | `OMNI_SOCIAL_AUTO_LINK` | `social.auto_link_by_email` | `true` | Safely links social logins with pre-hijack password invalidation. | [Social Login](/laravel-omni-auth/features/social-login/) |
 | `GOOGLE_CLIENT_ID` | `social.providers.google.client_id` | `null` | Google Cloud OAuth2 Web Client ID. | [Social Login](/laravel-omni-auth/features/social-login/) |
 | `GOOGLE_CLIENT_SECRET` | `social.providers.google.client_secret` | `null` | Google Cloud OAuth2 Client Secret. | [Social Login](/laravel-omni-auth/features/social-login/) |
@@ -61,6 +63,8 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_ENFORCE_PASSWORD_STRENGTH` | `password_reset.enforce_strength` | `true` | Enforces Laravel Password default uncompromised complexity rules. | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_VERIFICATION_TTL` | `verification.ttl` | `60` | Lifespan in minutes of signed email verification URLs and OTPs. | [Email Verification](/laravel-omni-auth/features/verification-and-deletion/) |
 | `OMNI_MAGIC_LINK_TTL` | `magic_link.ttl` | `15` | Lifespan in minutes of single-use passwordless login links. | [Magic Links](/laravel-omni-auth/features/magic-links/) |
+| `OMNI_MAGIC_LINK_ALLOWED_SCHEMES` | `magic_link.allowed_schemes` | `'myapp,exp'` | Comma-separated mobile deep link schemes allowed for magic links. | [Magic Links](/laravel-omni-auth/features/magic-links/) |
+| `OMNI_ALLOWED_REDIRECT_HOSTS` | `allowed_redirect_hosts` | `''` | Comma-separated external domains permitted for redirect validation. | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_ROUTES_ENABLED` | `routes.enabled` | `true` | Master switch to register built-in routes (`false` activates Headless mode). | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_ROUTES_PREFIX` | `routes.prefix` | `'api/auth'` | Base URL prefix for all registered authentication endpoints. | [Installation Guide](/laravel-omni-auth/getting-started/installation/) |
 | `OMNI_NOTIFICATIONS_ENABLED` | `notifications.enabled` | `true` | Master switch for built-in Markdown email notifications. | [Notifications Guide](/laravel-omni-auth/features/notifications/) |
@@ -132,6 +136,7 @@ For browser-based SPAs (Next.js, Nuxt, Vue, React), tokens are delivered via enc
 'cookie' => [
     'name' => env('OMNI_COOKIE_NAME', 'omni_access_token'),
     'refresh_name' => env('OMNI_REFRESH_COOKIE_NAME', 'omni_refresh_token'),
+    'device_name' => env('OMNI_DEVICE_COOKIE_NAME', 'omni_device_id'),
     'domain' => env('OMNI_COOKIE_DOMAIN', null),
     'path' => '/',
     'secure' => env('OMNI_COOKIE_SECURE', null), // null auto-detects request()->isSecure()
@@ -236,6 +241,7 @@ Configure TOTP app issuers, challenge token validity, and passwordless re-authen
 'two_factor' => [
     'issuer' => env('OMNI_2FA_ISSUER', null), // null defaults to config('app.name')
     'challenge_ttl' => env('OMNI_2FA_CHALLENGE_TTL', 5), // minutes
+    'fallback_otp_ttl' => env('OMNI_2FA_FALLBACK_OTP_TTL', 5), // minutes
     'reauth_passwordless' => env('OMNI_2FA_REAUTH_PASSWORDLESS', false), // require email OTP for passwordless accounts
 ],
 ```

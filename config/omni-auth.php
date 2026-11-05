@@ -60,6 +60,7 @@ return [
     'cookie' => [
         'name' => env('OMNI_COOKIE_NAME', 'omni_access_token'),
         'refresh_name' => env('OMNI_REFRESH_COOKIE_NAME', 'omni_refresh_token'),
+        'device_name' => env('OMNI_DEVICE_COOKIE_NAME', 'omni_device_id'),
         'domain' => env('OMNI_COOKIE_DOMAIN', null),
         'path' => '/',
         'secure' => env('OMNI_COOKIE_SECURE', null), // null = auto-detect via request()->isSecure()
@@ -154,6 +155,8 @@ return [
         'auto_login' => env('OMNI_REGISTRATION_AUTO_LOGIN', true),
         'default_role' => env('OMNI_REGISTRATION_DEFAULT_ROLE', null),
         'rules' => null, // null uses dynamic schema rules based on identifier_column
+        'allowed_attributes' => ['name', 'email', 'phone', 'username'],
+        'guarded' => ['is_admin', 'role', 'roles', 'permissions', 'email_verified_at'],
     ],
 
     /*
@@ -164,6 +167,7 @@ return [
     'two_factor' => [
         'issuer' => env('OMNI_2FA_ISSUER', null), // null defaults to config('app.name')
         'challenge_ttl' => env('OMNI_2FA_CHALLENGE_TTL', 5), // minutes
+        'fallback_otp_ttl' => env('OMNI_2FA_FALLBACK_OTP_TTL', 5), // minutes
         'reauth_passwordless' => env('OMNI_2FA_REAUTH_PASSWORDLESS', false), // enforce email OTP re-auth for passwordless accounts
     ],
 
@@ -226,7 +230,17 @@ return [
     */
     'magic_link' => [
         'ttl' => env('OMNI_MAGIC_LINK_TTL', 15), // minutes
+        'allowed_schemes' => array_filter(explode(',', env('OMNI_MAGIC_LINK_ALLOWED_SCHEMES', 'myapp,exp'))),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Redirect Hosts (Open-Redirect Prevention)
+    |--------------------------------------------------------------------------
+    | Whitelist external hostnames that password reset and magic link redirect
+    | URLs are allowed to point to. By default, only the app host is trusted.
+    */
+    'allowed_redirect_hosts' => array_filter(explode(',', env('OMNI_ALLOWED_REDIRECT_HOSTS', ''))),
 
     /*
     |--------------------------------------------------------------------------
