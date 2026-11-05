@@ -460,4 +460,20 @@ class SecurityResidualsTest extends TestCase
 
         $res->assertStatus(422);
     }
+
+    public function test_social_redirect_route_is_rate_limited_against_cache_flooding(): void
+    {
+        Cache::flush();
+
+        // 30 requests within 1 minute are allowed
+        for ($i = 0; $i < 30; $i++) {
+            $res = $this->getJson('/api/auth/social/google/redirect');
+            $this->assertEquals(200, $res->status());
+        }
+
+        // 31st request triggers rate limiter (HTTP 429 Too Many Requests)
+        $blocked = $this->getJson('/api/auth/social/google/redirect');
+        $this->assertEquals(429, $blocked->status());
+        $this->assertStringContainsString('Too many social redirect requests', $blocked->json('message'));
+    }
 }

@@ -47,7 +47,7 @@ class SocialAuthManager
         $config = $this->getProviderConfig($provider);
 
         // H4: Store state in cache with 15-minute TTL to prevent OAuth CSRF / login injection
-        Cache::put("omni_oauth_state_{$state}", $provider, now()->addMinutes(15));
+        $this->cache()->put("omni_oauth_state_{$state}", $provider, now()->addMinutes(15));
 
         // 1. If Laravel Socialite is installed, use Socialite driver
         if (class_exists(\Laravel\Socialite\Facades\Socialite::class)) {
@@ -107,7 +107,7 @@ class SocialAuthManager
             throw new InvalidArgumentException('Missing required OAuth state parameter. Possible CSRF attack detected.');
         }
 
-        $cachedProvider = Cache::pull("omni_oauth_state_{$state}");
+        $cachedProvider = $this->cache()->pull("omni_oauth_state_{$state}");
         if (!$cachedProvider || $cachedProvider !== $provider) {
             throw new InvalidArgumentException('Invalid or expired OAuth state parameter. Possible CSRF attack detected.');
         }

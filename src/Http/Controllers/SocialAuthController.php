@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\RateLimiter;
 use KaziOmar\OmniAuth\Facades\Omni;
 use KaziOmar\OmniAuth\Features;
 
@@ -35,6 +36,17 @@ class SocialAuthController extends Controller
         if ($error = $this->ensureFeatureEnabled()) {
             return $error;
         }
+
+        $ip = $request->ip() ?? 'unknown-ip';
+        $throttleKey = "omni_social_redirect:{$ip}";
+        if (RateLimiter::tooManyAttempts($throttleKey, 30)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return response()->json([
+                'ok' => false,
+                'message' => "Too many social redirect requests. Please wait {$seconds} seconds.",
+            ], 429);
+        }
+        RateLimiter::hit($throttleKey, 60);
 
         try {
             $url = Omni::social()->getRedirectUrl($provider);
