@@ -19,9 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - `php artisan omni:install`: Interactive installer publishing configuration and running migrations.
   - `php artisan omni:prune-tokens`: Automated cleanup pruning expired tokens and stale devices (supports `--hours` and `--days`).
 - **Astro Starlight Documentation Portal**: Dedicated technical documentation in `/docs` featuring architectural diagrams, security analysis, multi-client integration guides (Next.js, Flutter, Expo), and complete API specifications.
-- **Test Suite**: 112 automated unit, integration, and security regression tests with 612 assertions passing across PHP 8.2–8.5 and Laravel 11–13.
+- **Test Suite**: 114 automated unit, integration, and security regression tests with 623 assertions passing across PHP 8.2–8.5 and Laravel 11–13.
 
 ### Security
+- Added mandatory Two-Factor Authentication (TOTP or Emergency Recovery Code) confirmation upon account deletion for any account with active 2FA.
 - Fixed account deletion bypass ensuring users with passwords strictly confirm their password even if social accounts are linked (N1).
 - Mitigated orphaned refresh tokens when logging in repeatedly on the same device ID, and ensured single-device logout revokes paired refresh tokens (N2).
 - Replaced hardcoded Bcrypt dummy hash with dynamic driver-aware hashing (`getDummyPasswordHash()`) to avoid 500 exceptions on Argon2/Argon2id drivers (N3).

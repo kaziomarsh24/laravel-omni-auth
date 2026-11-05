@@ -74,6 +74,108 @@ class ThirdReviewAuditTest extends TestCase
     }
 
     /**
+     * Account deletion with active 2FA strictly requires 2FA confirmation (TOTP code or recovery code).
+     */
+    public function test_account_deletion_with_active_2fa_requires_totp_or_recovery_code(): void
+    {
+        $user = TestUser::create([
+            'name' => '2FA Deletion User',
+            'email' => '2fa-delete@example.com',
+            'password' => Hash::make('Password123!'),
+            'email_verified_at' => now(),
+            'password_set_at' => now(),
+        ]);
+
+        $secret = Omni::twoFactor()->generateSecret();
+        $recoveryPlain = '12345678';
+        AuthTwoFactor::create([
+            'user_id' => $user->id,
+            'secret' => $secret,
+            'confirmed_at' => now(),
+            'recovery_codes' => [Hash::make($recoveryPlain)],
+        ]);
+
+        $token = $user->createToken('access_token', ['access-api'])->plainTextToken;
+
+        // 1. Password provided, but missing 2FA code
+        $missingCodeRes = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->deleteJson('/api/auth/account', [
+            'password' => 'Password123!',
+        ]);
+        $missingCodeRes->assertStatus(422);
+        $this->assertStringContainsString('Two-factor authentication code is required', $missingCodeRes->json('message'));
+
+        // 2. Password provided, but invalid 2FA code
+        $invalidCodeRes = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->deleteJson('/api/auth/account', [
+            'password' => 'Password123!',
+            'code' => '999999',
+        ]);
+        $invalidCodeRes->assertStatus(422);
+        $this->assertStringContainsString('Invalid two-factor authentication or recovery code', $invalidCodeRes->json('message'));
+
+        // 3. Password provided with valid Emergency Recovery Code
+        $validRes = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->deleteJson('/api/auth/account', [
+            'password' => 'Password123!',
+            'code' => $recoveryPlain,
+        ]);
+        $validRes->assertStatus(200);
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertDatabaseMissing('auth_two_factor', ['user_id' => $user->id]);
+    }
+
+    /**
+     * Social-only user who enabled 2FA requires 2FA confirmation code for account deletion.
+     */
+    public function test_social_only_user_with_active_2fa_requires_2fa_code(): void
+    {
+        $user = TestUser::create([
+            'name' => 'Social 2FA User',
+            'email' => 'social-2fa@example.com',
+            'password' => Hash::make('random-placeholder'),
+            'email_verified_at' => now(),
+        ]);
+
+        AuthSocialAccount::create([
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_id' => 'social-id-1234',
+            'data' => ['is_social_only' => true],
+        ]);
+
+        $secret = Omni::twoFactor()->generateSecret();
+        $recoveryPlain = '87654321';
+        AuthTwoFactor::create([
+            'user_id' => $user->id,
+            'secret' => $secret,
+            'confirmed_at' => now(),
+            'recovery_codes' => [Hash::make($recoveryPlain)],
+        ]);
+
+        $token = $user->createToken('access_token', ['access-api'])->plainTextToken;
+
+        // Missing 2FA code
+        $res = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->deleteJson('/api/auth/account', []);
+        $res->assertStatus(422);
+        $this->assertStringContainsString('Two-factor authentication code is required', $res->json('message'));
+
+        // Valid 2FA code deletes account without password
+        $validRes = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->deleteJson('/api/auth/account', [
+            'code' => $recoveryPlain,
+        ]);
+        $validRes->assertStatus(200);
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+    }
+
+    /**
      * N1 & N9: Pure social-only user can delete account and setup 2FA without password.
      */
     public function test_n1_and_n9_social_only_user_can_delete_and_setup_2fa_without_password(): void

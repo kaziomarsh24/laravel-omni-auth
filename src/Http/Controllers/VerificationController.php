@@ -219,12 +219,14 @@ class VerificationController extends Controller
 
         $validated = $request->validate([
             'password' => ['nullable', 'string'],
+            'code' => ['nullable', 'string'],
         ]);
 
         try {
             Omni::passwordReset()->deleteAccount(
                 $user,
-                $validated['password'] ?? null
+                $validated['password'] ?? null,
+                $validated['code'] ?? null
             );
 
             \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);

@@ -211,9 +211,12 @@ class PasswordAndVerificationTest extends TestCase
 
         $this->actingAs($this->user);
 
-        // Delete account requiring password confirmation
+        $totp = app(\KaziOmar\OmniAuth\Services\TwoFactorManager::class)->calculateCode('JBSWY3DPEHPK3PXP', time());
+
+        // Delete account requiring password and 2FA code confirmation
         $deleteRes = $this->deleteJson('/api/auth/account', [
             'password' => 'Secret123!@#',
+            'code' => $totp,
         ]);
 
         $deleteRes->assertStatus(200)

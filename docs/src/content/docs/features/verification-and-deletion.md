@@ -93,8 +93,8 @@ Apple App Store Review Guidelines strictly mandate that any mobile application t
 
 OmniAuth enables users to permanently delete their account and associated authentication credentials via [`DELETE /api/auth/account`](/laravel-omni-auth/reference/api-reference/#delete-apiauthaccount).
 
-### Password-Authenticated Deletion
-For standard email and password accounts, providing the current password is required:
+### Password & 2FA Authenticated Deletion
+For accounts with a user-set password, confirming the current password is required. Additionally, if Two-Factor Authentication is active on the account, confirming with a valid TOTP code (or emergency recovery code) is strictly enforced:
 
 ```http
 DELETE /api/auth/account
@@ -102,7 +102,8 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "password": "UserCurrentPassword123!"
+  "password": "UserCurrentPassword123!",
+  "code": "849201"
 }
 ```
 
@@ -114,8 +115,8 @@ Response:
 }
 ```
 
-### Password-Free Deletion for Social Accounts
-If an account was registered exclusively through an external OAuth provider (Google or Apple) and possesses no local password hash (`password === null`), OmniAuth permits account deletion without password confirmation, provided the session carries valid authentication credentials.
+### Deletion for Social-Only Accounts
+If an account was registered exclusively through an external OAuth provider (Google or Apple) and possesses no local password, password confirmation is bypassed. However, if the social user enabled 2FA, their 2FA code is still strictly required. If they have neither a password nor 2FA, deletion proceeds with an empty body in full compliance with Apple App Store Guideline 5.1.1(v).
 
 ### Cascading Cleanup
 Upon deletion:

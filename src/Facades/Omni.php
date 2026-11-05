@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \KaziOmar\OmniAuth\Services\TwoFactorManager twoFactor()
  * @method static \KaziOmar\OmniAuth\Services\SocialAuthManager social()
  * @method static \KaziOmar\OmniAuth\Services\PasswordResetManager passwordReset()
- * @method static bool deleteAccount(\Illuminate\Contracts\Auth\Authenticatable $user, ?string $password = null)
+ * @method static bool deleteAccount(\Illuminate\Contracts\Auth\Authenticatable $user, ?string $password = null, ?string $code = null)
  * @method static bool hasUserSetPassword(\Illuminate\Contracts\Auth\Authenticatable $user)
  * @method static string getDummyPasswordHash()
  *

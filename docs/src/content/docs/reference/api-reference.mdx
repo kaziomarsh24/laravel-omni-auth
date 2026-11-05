@@ -1113,7 +1113,7 @@ Dispatches a new email verification code/link to the authenticated user.
 Permanently deletes the authenticated user account and executes cascading cleanup of devices, tokens, and 2FA credentials. Complies with GDPR and Apple App Store Guideline 5.1.1(v) (see [Account Deletion Guide](/laravel-omni-auth/features/verification-and-deletion/#self-service-account-deletion-gdpr--apple-app-store)).
 
 - **Route Name**: `omni.account.delete`
-- **Authentication**: Required (`omni.auth`) + Password Confirmation (Optional for social-only users)
+- **Authentication**: Required (`omni.auth`) + Password / 2FA Confirmation (when applicable)
 
 #### Request Payloads
 
@@ -1128,8 +1128,19 @@ For accounts registered with email and password, confirming the current password
 ```
 
   </TabItem>
-  <TabItem label="Social-Only Account (Google / Apple)">
-Accounts registered exclusively through OAuth providers that have no local password hash (`password === null`) can be deleted with an empty body:
+  <TabItem label="Account with 2FA Enabled">
+If Two-Factor Authentication is active on the account, providing a valid TOTP code or emergency recovery code is strictly required:
+
+```json
+{
+  "password": "UserCurrentPassword123!",
+  "code": "849201"
+}
+```
+
+  </TabItem>
+  <TabItem label="Social-Only Account (No 2FA)">
+Accounts registered exclusively through OAuth providers that have no local password and no active 2FA can be deleted with an empty body:
 
 ```json
 {}

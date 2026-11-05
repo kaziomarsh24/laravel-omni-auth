@@ -498,16 +498,34 @@ class PasswordResetManager
      * Delete user account permanently complying with Apple App Store Guideline 5.1.1(v) & GDPR.
      * Allows password-free deletion for social-only users who do not have a password.
      */
-    public function deleteAccount(Authenticatable|Model $user, ?string $password = null): bool
+    public function deleteAccount(Authenticatable|Model $user, ?string $password = null, ?string $code = null): bool
     {
         $hasPassword = \KaziOmar\OmniAuth\Facades\Omni::hasUserSetPassword($user);
 
-        // N1: If the user has a user-set password, password confirmation is strictly required.
-        // Password-free deletion is exclusively allowed for social-only users who never set a local password.
+        // 1. Password confirmation: Required if user has a set password
         if ($hasPassword) {
             if (empty($password) || !Hash::check($password, $user->password)) {
                 throw ValidationException::withMessages([
                     'password' => ['Incorrect password confirmation provided for account deletion.'],
+                ]);
+            }
+        }
+
+        // 2. Two-Factor Authentication confirmation: Required if 2FA is active on the account
+        if (\KaziOmar\OmniAuth\Features::enabled(\KaziOmar\OmniAuth\Features::twoFactorAuth()) && \KaziOmar\OmniAuth\Facades\Omni::twoFactor()->isEnabled($user)) {
+            if (empty($code)) {
+                throw ValidationException::withMessages([
+                    'code' => ['Two-factor authentication code is required to delete this account.'],
+                ]);
+            }
+
+            $twoFactor = AuthTwoFactor::where('user_id', $user->getAuthIdentifier())->first();
+            $totpValid = $twoFactor && \KaziOmar\OmniAuth\Facades\Omni::twoFactor()->verifyCode($twoFactor->secret, trim($code));
+            $recoveryValid = !$totpValid && $twoFactor && \KaziOmar\OmniAuth\Facades\Omni::twoFactor()->verifyAndConsumeRecoveryCode($twoFactor, trim($code));
+
+            if (!$totpValid && !$recoveryValid) {
+                throw ValidationException::withMessages([
+                    'code' => ['Invalid two-factor authentication or recovery code provided for account deletion.'],
                 ]);
             }
         }

@@ -52,9 +52,9 @@ class OmniAuthManager
     /**
      * Delete user account permanently complying with App Store guidelines & GDPR.
      */
-    public function deleteAccount(Authenticatable|Model $user, ?string $password = null): bool
+    public function deleteAccount(Authenticatable|Model $user, ?string $password = null, ?string $code = null): bool
     {
-        return $this->passwordReset()->deleteAccount($user, $password);
+        return $this->passwordReset()->deleteAccount($user, $password, $code);
     }
 
     /**
