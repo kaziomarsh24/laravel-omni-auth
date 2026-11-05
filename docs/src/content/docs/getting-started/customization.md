@@ -225,13 +225,13 @@ Register your resource in `config/omni-auth.php`:
 
 OmniAuth dispatches clean Laravel events whenever critical security milestones happen. You can register listeners in your application to send customized emails, Twilio SMS, or Slack alerts.
 
-| Event Class | Dispatched When | Payload |
+| Event Class | Dispatched When | Payload Properties |
 |---|---|---|
-| `PasswordResetOtpRequested` | User requests a password reset code | `$event->user`, `$event->otp` |
-| `MagicLinkRequested` | User requests a passwordless magic link | `$event->user`, `$event->token`, `$event->url` |
-| `TwoFactorFallbackOtpRequested` | User requests an emergency SMS/email 2FA code | `$event->user`, `$event->otp` |
-| `EmailVerificationRequested` | User initiates email address verification | `$event->user`, `$event->token`, `$event->url` |
-| `AccountDeleted` | User initiates self-service account deletion | `$event->user` |
+| `PasswordResetOtpRequested` | User requests a password reset code | `$event->user`, `$event->otp`, `$event->resetUrl` |
+| `MagicLinkRequested` | User requests a passwordless magic login link | `$event->user`, `$event->magicUrl`, `$event->code` |
+| `TwoFactorFallbackOtpRequested` | User requests an emergency SMS/email 2FA backup code | `$event->user`, `$event->otp` |
+| `EmailVerificationRequested` | User initiates email address verification | `$event->user`, `$event->verificationUrl`, `$event->otp` |
+| `AccountDeleted` | User completes password-confirmed account deletion | `$event->user` |
 
 ### Example: Send SMS OTP via Twilio
 
