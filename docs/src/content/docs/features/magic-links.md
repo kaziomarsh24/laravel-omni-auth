@@ -37,6 +37,10 @@ sequenceDiagram
 
 Generates a single-use token and dispatches an email containing the signed login link (see [`POST /api/auth/magic-link`](/laravel-omni-auth/reference/api-reference/#post-apiauthmagic-link)):
 
+:::tip[Customizing Magic Link Delivery (Email, SMS, or WhatsApp)]
+OmniAuth dispatches the `MagicLinkRequested` event containing `$event->user`, `$event->magicUrl`, and `$event->code`. To send branded HTML emails or deliver login links via Twilio SMS / WhatsApp, see our [Multi-Channel Delivery Recipes](/laravel-omni-auth/getting-started/customization/#multi-channel-delivery-recipes).
+:::
+
 ```http
 POST /api/auth/magic-link
 Content-Type: application/json

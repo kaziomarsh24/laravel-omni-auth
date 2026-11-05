@@ -3,6 +3,8 @@ title: Customization & Extending
 description: Master headless mode, custom controllers with Omni facade, custom validation rules, event listeners, and the HasOmniAuth model trait.
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 Laravel OmniAuth is built on a **headless-first architecture**. While it ships with ready-to-use routes and controllers for rapid prototyping, every component can be customized, extended, or replaced with your own custom application logic.
 
 ---
@@ -221,9 +223,15 @@ Register your resource in `config/omni-auth.php`:
 
 ---
 
-## Event-Driven Architecture (Custom Notifications & SMS)
+## Event-Driven Architecture (Custom Notifications, SMS & WhatsApp)
 
-OmniAuth dispatches clean Laravel events whenever critical security milestones happen. You can register listeners in your application to send customized emails, Twilio SMS, or Slack alerts.
+OmniAuth uses a pure **Zero Vendor Lock-in** event architecture. The core package never hardcodes a specific delivery vendor; instead, it dispatches typed Laravel events whenever critical security milestones occur.
+
+You can register listeners in your host application to deliver OTPs, verification URLs, and magic links across any channel: **Branded HTML Emails**, **Twilio SMS**, **Local SMS Gateways**, or **Meta WhatsApp Business**.
+
+### Security Milestone Events
+
+<div class="comparison-table-wrapper">
 
 | Event Class | Dispatched When | Payload Properties |
 |---|---|---|
@@ -233,7 +241,57 @@ OmniAuth dispatches clean Laravel events whenever critical security milestones h
 | `EmailVerificationRequested` | User initiates email address verification | `$event->user`, `$event->verificationUrl`, `$event->otp` |
 | `AccountDeleted` | User completes password-confirmed account deletion | `$event->user` |
 
-### Example: Send SMS OTP via Twilio
+</div>
+
+---
+
+### Multi-Channel Delivery Recipes
+
+Choose your delivery channel below to see copy-paste listener implementations:
+
+<Tabs>
+  <TabItem label="✉️ Email (Laravel Mail / Resend)">
+Use Laravel's native mail system or modern providers like Resend, Postmark, or Mailgun to send branded HTML emails:
+
+```php
+// app/Listeners/SendAuthEmailListener.php
+
+namespace App\Listeners;
+
+use Illuminate\Support\Facades\Mail;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+class SendAuthEmailListener
+{
+    public function handle(PasswordResetOtpRequested $event): void
+    {
+        Mail::raw(
+            "Hello {$event->user->name},\n\nYour security verification code is: {$event->otp}\n\nThis code expires in 15 minutes.",
+            function ($message) use ($event) {
+                $message->to($event->user->email)
+                        ->subject('Your Password Reset Verification Code');
+            }
+        );
+    }
+}
+```
+
+#### Local Zero-Cost Testing (.env)
+Test email delivery locally without setting up live SMTP credentials:
+
+```dotenv
+# 1. Zero-setup logging: writes full email and OTP directly to storage/logs/laravel.log
+MAIL_MAILER=log
+
+# 2. Or use local Mailpit / Mailtrap (default on port 1025)
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+```
+  </TabItem>
+
+  <TabItem label="📱 SMS (Twilio / Local Gateways)">
+Deliver instant 6-digit OTP codes directly to mobile phones via Twilio or any local telecom HTTP gateway (e.g. SSL Wireless, Greenweb, MSG91):
 
 ```php
 // app/Listeners/SendPasswordResetSms.php
@@ -250,7 +308,7 @@ class SendPasswordResetSms
         $user = $event->user;
         $otp = $event->otp;
 
-        if ($user->phone) {
+        if (!empty($user->phone)) {
             $twilio = new TwilioClient(config('services.twilio.sid'), config('services.twilio.token'));
             $twilio->messages->create($user->phone, [
                 'from' => config('services.twilio.from'),
@@ -261,17 +319,104 @@ class SendPasswordResetSms
 }
 ```
 
-Register your listener in `app/Providers/EventServiceProvider.php` (or `AppServiceProvider.php` in Laravel 11/12):
+#### Twilio Configuration (.env)
+Add your Twilio credentials to `.env`:
+
+```dotenv
+TWILIO_SID=ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+TWILIO_TOKEN=your_auth_token_here
+TWILIO_FROM=+15551234567
+```
+  </TabItem>
+
+  <TabItem label="💬 WhatsApp (Meta Cloud API / Twilio)">
+Send high-delivery verification messages via Meta WhatsApp Business Platform or Twilio WhatsApp channel:
 
 ```php
-use App\Listeners\SendPasswordResetSms;
-use Illuminate\Support\Facades\Event;
+// app/Listeners/SendWhatsAppOtpListener.php
+
+namespace App\Listeners;
+
+use Illuminate\Support\Facades\Http;
 use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
 
-Event::listen(
-    PasswordResetOtpRequested::class,
-    SendPasswordResetSms::class,
-);
+class SendWhatsAppOtpListener
+{
+    public function handle(PasswordResetOtpRequested $event): void
+    {
+        $user = $event->user;
+        $otp = $event->otp;
+
+        if (empty($user->phone)) {
+            return;
+        }
+
+        // Direct Meta WhatsApp Cloud API call
+        $phoneId = config('services.whatsapp.phone_id');
+        Http::withToken(config('services.whatsapp.token'))
+            ->post("https://graph.facebook.com/v20.0/{$phoneId}/messages", [
+                'messaging_product' => 'whatsapp',
+                'to' => $user->phone,
+                'type' => 'template',
+                'template' => [
+                    'name' => config('services.whatsapp.template_name', 'auth_otp'),
+                    'language' => ['code' => 'en'],
+                    'components' => [
+                        [
+                            'type' => 'body',
+                            'parameters' => [
+                                ['type' => 'text', 'text' => $otp]
+                            ]
+                        ]
+                    ]
+                ]
+            ]);
+    }
+}
+```
+
+#### WhatsApp Configuration (.env)
+```dotenv
+WHATSAPP_TOKEN=your_permanent_system_user_token
+WHATSAPP_PHONE_ID=109283746501928
+WHATSAPP_TEMPLATE_NAME=auth_otp_code
+```
+  </TabItem>
+</Tabs>
+
+---
+
+### Registering Multiple Listeners (Dual Delivery: Email + SMS)
+
+If your application needs to deliver codes via **both Email and SMS simultaneously**, register multiple listeners to the same event in `app/Providers/AppServiceProvider.php` (Laravel 11/12):
+
+```php
+// app/Providers/AppServiceProvider.php
+
+namespace App\Providers;
+
+use App\Listeners\SendAuthEmailListener;
+use App\Listeners\SendPasswordResetSms;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+use KaziOmar\OmniAuth\Events\PasswordResetOtpRequested;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        // Dispatches to both email and phone at the same time
+        Event::listen(
+            PasswordResetOtpRequested::class,
+            SendAuthEmailListener::class,
+        );
+
+        Event::listen(
+            PasswordResetOtpRequested::class,
+            SendPasswordResetSms::class,
+        );
+    }
+}
 ```
 
 ---

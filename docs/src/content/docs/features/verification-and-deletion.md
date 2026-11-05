@@ -81,6 +81,10 @@ Response:
 }
 ```
 
+:::tip[Customizing Verification Delivery (Email, SMS, or WhatsApp)]
+When verification codes or signed links are resent, OmniAuth dispatches the `EmailVerificationRequested` event with `$event->user`, `$event->verificationUrl`, and `$event->otp`. Follow our [Multi-Channel Delivery Recipes](/laravel-omni-auth/getting-started/customization/#multi-channel-delivery-recipes) to deliver codes via custom email, Twilio SMS, or WhatsApp.
+:::
+
 ---
 
 ## Self-Service Account Deletion (GDPR & Apple App Store)

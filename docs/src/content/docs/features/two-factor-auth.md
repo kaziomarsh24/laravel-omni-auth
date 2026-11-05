@@ -134,9 +134,15 @@ Once validated:
 - Real `access_token` and `refresh_token` instances are issued.
 - The standard Laravel `Illuminate\Auth\Events\Login` event is fired.
 
-### Recovery Code Fallback
+### Recovery Code & Fallback OTP
 
-If the user loses access to their authenticator app, they can pass any of their unused 8-character recovery codes in the `code` field. OmniAuth hashes the code, verifies the match, and burns that specific recovery code so it cannot be reused.
+If the user loses access to their authenticator app:
+1. **Recovery Codes**: They can pass any of their unused 8-character recovery codes in the `code` field. OmniAuth hashes the code, verifies the match, and burns that specific recovery code so it cannot be reused.
+2. **Emergency Fallback OTP**: If recovery codes are also unavailable, the client can call [`POST /api/auth/2fa/fallback-otp`](/laravel-omni-auth/reference/api-reference/#post-apiauth2fafallback-otp) with their `two_factor_token`. OmniAuth dispatches the `TwoFactorFallbackOtpRequested` event to send an emergency 6-digit OTP code to the user's verified email, SMS, or WhatsApp.
+
+:::tip[Multi-Channel OTP Delivery (SMS / WhatsApp)]
+To route emergency 2FA fallback OTPs directly to user phones via Twilio SMS or Meta WhatsApp Business, see our [Multi-Channel Delivery Recipes](/laravel-omni-auth/getting-started/customization/#multi-channel-delivery-recipes).
+:::
 
 ---
 
