@@ -32,7 +32,7 @@ class SocialAccountUnlinkedNotification extends Notification
     public function toMail(mixed $notifiable): MailMessage
     {
         $appName = (string) (config('app.name') ?: 'Laravel');
-        $name = is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there';
+        $name = NotificationHelper::sanitizeName(is_object($notifiable) ? ($notifiable->name ?? null) : null);
         $providerName = ucfirst($this->provider);
         $timestamp = now()->toRfc2822String();
 

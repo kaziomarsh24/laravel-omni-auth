@@ -230,7 +230,7 @@ return [
     */
     'magic_link' => [
         'ttl' => env('OMNI_MAGIC_LINK_TTL', 15), // minutes
-        'allowed_schemes' => array_filter(explode(',', env('OMNI_MAGIC_LINK_ALLOWED_SCHEMES', 'myapp,exp'))),
+        'allowed_schemes' => array_filter(explode(',', env('OMNI_MAGIC_LINK_ALLOWED_SCHEMES', 'myapp'))),
     ],
 
     /*

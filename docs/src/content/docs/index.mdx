@@ -48,7 +48,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Test Coverage
 
-Every release of Laravel OmniAuth is verified by an automated test suite with **135 tests** and **712 assertions** across 11 test suites, covering credential validation, token rotation, rate limiting, and session security.
+Every release of Laravel OmniAuth is verified by an automated test suite with **141 tests** and **745 assertions** across 12 test suites, covering credential validation, token rotation, rate limiting, and session security.
 
 | Area | What's Tested | Tests / Assertions | Status |
 | :--- | :--- | :---: | :---: |
@@ -63,6 +63,7 @@ Every release of Laravel OmniAuth is verified by an automated test suite with **
 | **Notifications & Alerts** | Built-in Markdown emails, 6-digit OTP delivery, security alerts (password changed, 2FA status, provider linking), GDPR notice | 14 tests (49 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Security Audits & Hardening** | Legacy user password checks, timing attacks, token abilities enforcement, Origin header spoofing, CSRF enforcement, URL validation | 46 tests (244 assertions) | <span class="badge-passed">✓ Passed</span> |
 | **Concurrency & Token Rotation** | Atomic token refresh locks, 429 Retry-After without cookie loss, 2FA setup concurrency, zero-memory token pruning | 8 tests (29 assertions) | <span class="badge-passed">✓ Passed</span> |
+| **Pentest Hardening & Probes** | Host Header Poisoning defeat, custom scheme network isolation, markdown phishing link neutralization, passwordless re-auth | 6 tests (33 assertions) | <span class="badge-passed">✓ Passed</span> |
 
 :::tip[Run Tests Locally]
 You can execute the entire test suite locally in your terminal at any time:

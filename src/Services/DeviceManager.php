@@ -302,6 +302,7 @@ class DeviceManager
         if ($cookieDeviceId && is_string($cookieDeviceId)) {
             $trimmedCookie = trim($cookieDeviceId);
             if ($trimmedCookie !== '' && strlen($trimmedCookie) <= 128 && preg_match('/^[\w\-\.]{1,128}$/', $trimmedCookie)) {
+                $request->attributes->set('omni_device_id', $trimmedCookie);
                 return $trimmedCookie;
             }
         }
@@ -309,6 +310,7 @@ class DeviceManager
         // If client is Web, generate a new unique random device ID and queue the persistent cookie
         if (\KaziOmar\OmniAuth\Facades\Omni::client()->isWeb($request)) {
             $newDeviceId = 'dev_' . \Illuminate\Support\Str::random(32);
+            $request->attributes->set('omni_device_id', $newDeviceId);
             if (class_exists(\Illuminate\Support\Facades\Cookie::class)) {
                 \Illuminate\Support\Facades\Cookie::queue(
                     \Illuminate\Support\Facades\Cookie::make(

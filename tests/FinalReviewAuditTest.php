@@ -376,12 +376,30 @@ class FinalReviewAuditTest extends TestCase
 
         $token = $socialUser->createToken('access_token', ['access-api'])->plainTextToken;
 
-        // Social-only user sets password without current_password
+        // 1. Social-only user without code receives 422 with email OTP dispatched (prevents stolen token backdoor)
+        $resRequireCode = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->postJson('/api/auth/password/change', [
+            'password' => 'BrandNewPassword123!',
+            'password_confirmation' => 'BrandNewPassword123!',
+        ]);
+
+        $resRequireCode->assertStatus(422)
+            ->assertJson([
+                'ok' => false,
+                'requires_code' => true,
+            ]);
+
+        // 2. Set OTP in cache and submit with valid code
+        $otpKey = "omni_email_verify_otp_{$socialUser->id}";
+        $this->app['cache']->put($otpKey, Hash::make('849201'), now()->addMinutes(15));
+
         $res = $this->withHeaders([
             'Authorization' => "Bearer {$token}",
         ])->postJson('/api/auth/password/change', [
             'password' => 'BrandNewPassword123!',
             'password_confirmation' => 'BrandNewPassword123!',
+            'code' => '849201',
         ]);
 
         $res->assertStatus(200);

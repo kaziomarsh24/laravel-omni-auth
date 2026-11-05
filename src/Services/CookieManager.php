@@ -53,6 +53,17 @@ class CookieManager
     }
 
     /**
+     * Create a persistent HttpOnly cookie for device tracking on web browsers.
+     */
+    public function makeDeviceCookie(string $deviceId, ?Request $request = null): Cookie
+    {
+        $name = config('omni-auth.cookie.device_name', 'omni_device_id');
+        $minutes = 525600; // 1 year persistence
+
+        return $this->createCookie($name, $deviceId, $minutes, $request);
+    }
+
+    /**
      * Attach access and optional refresh cookies to an HTTP response.
      */
     public function attachTokens(Response $response, string $accessToken, ?string $refreshToken = null, ?Request $request = null): Response
@@ -61,6 +72,13 @@ class CookieManager
 
         if ($refreshToken !== null) {
             $response->headers->setCookie($this->makeRefreshTokenCookie($refreshToken, null, $request));
+        }
+
+        // R5: Directly attach persistent device cookie to the response so API routes without AddQueuedCookiesToResponse still receive it
+        $cookieName = config('omni-auth.cookie.device_name', 'omni_device_id');
+        $deviceId = $request ? ($request->attributes->get('omni_device_id') ?? $request->cookie($cookieName)) : null;
+        if (!empty($deviceId) && is_string($deviceId)) {
+            $response->headers->setCookie($this->makeDeviceCookie($deviceId, $request));
         }
 
         return $response;

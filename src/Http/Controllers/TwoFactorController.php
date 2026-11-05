@@ -123,10 +123,9 @@ class TwoFactorController extends Controller
             // R2: For passwordless (social-only) accounts, enforce email OTP verification if enabled
             $otp = $code ?? $request->input('otp');
             $otpKey = "omni_email_verify_otp_{$user->getAuthIdentifier()}";
-            $hashedOtp = $this->cache()->get($otpKey);
 
             if (empty($otp)) {
-                Omni::passwordReset()->sendEmailVerificationNotification($user);
+                Omni::passwordReset()->sendEmailVerification($user);
                 \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);
                 return response()->json([
                     'ok' => false,
@@ -134,6 +133,8 @@ class TwoFactorController extends Controller
                     'requires_code' => true,
                 ], 422);
             }
+
+            $hashedOtp = Cache::get($otpKey);
 
             if (!$hashedOtp || !Hash::check(trim((string) $otp), $hashedOtp)) {
                 \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 600);

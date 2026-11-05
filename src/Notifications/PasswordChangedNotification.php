@@ -34,7 +34,7 @@ class PasswordChangedNotification extends Notification
     public function toMail(mixed $notifiable): MailMessage
     {
         $appName = (string) (config('app.name') ?: 'Laravel');
-        $name = is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there';
+        $name = NotificationHelper::sanitizeName(is_object($notifiable) ? ($notifiable->name ?? null) : null);
 
         return (new MailMessage())
             ->subject("Security Alert: Your password was changed - {$appName}")

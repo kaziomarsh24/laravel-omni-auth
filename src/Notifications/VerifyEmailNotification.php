@@ -33,7 +33,7 @@ class VerifyEmailNotification extends Notification
     public function toMail(mixed $notifiable): MailMessage
     {
         $appName = (string) (config('app.name') ?: 'Laravel');
-        $name = is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there';
+        $name = NotificationHelper::sanitizeName(is_object($notifiable) ? ($notifiable->name ?? null) : null);
         $ttl = (int) config('omni-auth.verification.ttl', 60);
 
         $mail = (new MailMessage())

@@ -985,10 +985,11 @@ Changes the authenticated user's password. Verifies current password (if user al
 #### Request Parameters
 | Field | Type | Required | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
-| `current_password` | `string` | Conditional | Current password. Required if the user already has a local password set. (Optional for social-only users setting their first password). | `"OldSecret123!"` |
-| `password` | `string` | Yes | New password (minimum 8 characters). | `"NewSecret456!"` |
+| `current_password` | `string` | Conditional | Required if user already has a local password set. | `"OldSecret123!"` |
+| `code` | `string` | Conditional | 6-digit email verification OTP or 2FA code. Required for passwordless (social-only) accounts setting a password for the first time. | `"849201"` |
+| `password` | `string` | Yes | New password (enforces configured complexity rules). | `"NewSecret456!"` |
 | `password_confirmation` | `string` | Yes | Confirmation of new password. Must match `password`. | `"NewSecret456!"` |
-| `logout_others` | `boolean` | No | If `true`, revokes active sessions and refresh tokens on all other devices. Defaults to `false`. | `true` |
+| `logout_others` | `boolean` | No | If `true`, revokes active sessions and tokens on all other devices. Defaults to `true`. | `true` |
 
 #### Success Response: 200 OK
 ```json

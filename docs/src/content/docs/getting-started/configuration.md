@@ -63,7 +63,7 @@ Every environment variable supported by Laravel OmniAuth, its default value, and
 | `OMNI_ENFORCE_PASSWORD_STRENGTH` | `password_reset.enforce_strength` | `true` | Enforces Laravel Password default uncompromised complexity rules. | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_VERIFICATION_TTL` | `verification.ttl` | `60` | Lifespan in minutes of signed email verification URLs and OTPs. | [Email Verification](/laravel-omni-auth/features/verification-and-deletion/) |
 | `OMNI_MAGIC_LINK_TTL` | `magic_link.ttl` | `15` | Lifespan in minutes of single-use passwordless login links. | [Magic Links](/laravel-omni-auth/features/magic-links/) |
-| `OMNI_MAGIC_LINK_ALLOWED_SCHEMES` | `magic_link.allowed_schemes` | `'myapp,exp'` | Comma-separated mobile deep link schemes allowed for magic links. | [Magic Links](/laravel-omni-auth/features/magic-links/) |
+| `OMNI_MAGIC_LINK_ALLOWED_SCHEMES` | `magic_link.allowed_schemes` | `'myapp'` | Comma-separated mobile deep link schemes allowed for magic links. | [Magic Links](/laravel-omni-auth/features/magic-links/) |
 | `OMNI_ALLOWED_REDIRECT_HOSTS` | `allowed_redirect_hosts` | `''` | Comma-separated external domains permitted for redirect validation. | [Security Defenses](/laravel-omni-auth/architecture/security-defenses/) |
 | `OMNI_ROUTES_ENABLED` | `routes.enabled` | `true` | Master switch to register built-in routes (`false` activates Headless mode). | [Customization Guide](/laravel-omni-auth/getting-started/customization/) |
 | `OMNI_ROUTES_PREFIX` | `routes.prefix` | `'api/auth'` | Base URL prefix for all registered authentication endpoints. | [Installation Guide](/laravel-omni-auth/getting-started/installation/) |

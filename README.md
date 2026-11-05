@@ -5,7 +5,7 @@
 <h1 align="center">Laravel OmniAuth</h1>
 
 <p align="center">
-  <strong>Production-grade, battle-tested authentication package for Laravel web and mobile applications.</strong>
+  <strong>Production-grade authentication package for Laravel web and mobile applications.</strong>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@ Rolling authentication in Laravel usually starts with Sanctum or Breeze, but pro
 - **Account Pre-Hijacking Prevention**: Links verified social logins safely; unverified pre-existing passwords and attacker 2FA credentials are automatically purged upon verified social claim.
 - **Constant-Time Timing Attack Defense**: Executes dynamic dummy hash comparisons matching the application's active hasher driver on non-existent users.
 - **30 Production Endpoints**: Turnkey API surface covering credentials, TOTP 2FA, social login, device auditing, password change, magic links, and GDPR account deletion.
-- **Thorough Test Coverage**: 121 automated tests (663 assertions) verifying security, concurrency locks, token rotation, and threat defenses.
+- **Thorough Test Coverage**: 141 automated tests (745 assertions) verifying security, concurrency locks, token rotation, and threat defenses.
 
 ---
 
@@ -143,7 +143,7 @@ composer test
 ```
 
 ```text
-Tests:    121 passed (663 assertions)
+Tests:    141 passed (745 assertions)
 ```
 
 ---

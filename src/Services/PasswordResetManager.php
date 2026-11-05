@@ -86,10 +86,10 @@ class PasswordResetManager
         $this->cache()->put($otpKey, Hash::make($otp), now()->addMinutes($ttl));
         $this->cache()->put($attemptsKey, 0, now()->addMinutes($ttl));
 
-        // Generate temporary signed URL if applicable
+        // Generate temporary signed URL pinned to config('app.url') (defeats Host header poisoning)
         $signedUrl = null;
         if (Route::has('omni.password.reset.url')) {
-            $signedUrl = URL::temporarySignedRoute(
+            $signedUrl = $this->temporarySignedRoute(
                 'omni.password.reset.url',
                 now()->addMinutes($ttl),
                 ['email' => $email]
@@ -271,7 +271,7 @@ class PasswordResetManager
         $email = method_exists($user, 'getEmailForVerification') ? $user->getEmailForVerification() : $user->email;
         $hash = sha1($email);
 
-        $signedUrl = URL::temporarySignedRoute(
+        $signedUrl = $this->temporarySignedRoute(
             'omni.email.verify',
             now()->addMinutes($ttl),
             [
@@ -387,7 +387,7 @@ class PasswordResetManager
                 'email' => $email,
             ]);
         } else {
-            $magicUrl = URL::temporarySignedRoute(
+            $magicUrl = $this->temporarySignedRoute(
                 'omni.magic.verify',
                 now()->addMinutes($ttl),
                 ['token' => $token]
@@ -415,10 +415,29 @@ class PasswordResetManager
         $scheme = strtolower($parsed['scheme'] ?? '');
         $host = strtolower($parsed['host'] ?? '');
 
+        $allowedHosts = (array) config('omni-auth.allowed_redirect_hosts', []);
+
         // Allow registered mobile custom schemes (e.g. myapp://)
         $allowedSchemes = (array) config('omni-auth.magic_link.allowed_schemes', []);
         if (!empty($scheme) && in_array($scheme, $allowedSchemes, true)) {
-            return;
+            // Check if the custom scheme URL contains an external network host (contains dot, port, or is an IP address)
+            $hasNetworkHost = !empty($host) && (str_contains($host, '.') || !empty($parsed['port']) || filter_var($host, FILTER_VALIDATE_IP));
+            if (!$hasNetworkHost) {
+                return;
+            }
+
+            // If a network host is attached (e.g. exp://attacker.example:19000), it must be explicitly whitelisted
+            if (in_array($host, $allowedHosts, true)) {
+                return;
+            }
+
+            if (app()->environment('local', 'testing') && ($host === 'localhost' || $host === '127.0.0.1')) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                'redirect_url' => ['Untrusted redirect URL domain. Custom scheme network host is not allowed.'],
+            ]);
         }
 
         // Exact match with configured app URL host
@@ -428,7 +447,6 @@ class PasswordResetManager
         }
 
         // Allow configured redirect hosts (exact match)
-        $allowedHosts = (array) config('omni-auth.allowed_redirect_hosts', []);
         if (!empty($host) && in_array($host, $allowedHosts, true)) {
             return;
         }
@@ -441,6 +459,46 @@ class PasswordResetManager
         throw ValidationException::withMessages([
             'redirect_url' => ['Untrusted redirect URL domain. Redirect destination is not in allowed hosts.'],
         ]);
+    }
+
+    /**
+     * Safely generate a temporary signed route strictly pinned to config('app.url').
+     * Prevents Host Header Poisoning when incoming requests contain spoofed Host headers.
+     */
+    public function temporarySignedRoute(string $name, mixed $expiration, array $parameters = []): string
+    {
+        $appUrl = (string) config('app.url', '');
+        $forcedRoot = false;
+        $forcedScheme = false;
+
+        if (!empty($appUrl)) {
+            $parsed = parse_url($appUrl);
+            if (!empty($parsed['scheme'])) {
+                URL::forceScheme($parsed['scheme']);
+                $forcedScheme = true;
+            }
+            URL::forceRootUrl(rtrim($appUrl, '/'));
+            $forcedRoot = true;
+        }
+
+        try {
+            return URL::temporarySignedRoute($name, $expiration, $parameters);
+        } finally {
+            if ($forcedRoot) {
+                URL::forceRootUrl(null);
+            }
+            if ($forcedScheme) {
+                URL::forceScheme(null);
+            }
+        }
+    }
+
+    /**
+     * Alias for sendEmailVerification to guarantee backward and cross-controller compatibility.
+     */
+    public function sendEmailVerificationNotification(Authenticatable|Model $user): bool
+    {
+        return $this->sendEmailVerification($user);
     }
 
     /**
@@ -584,8 +642,16 @@ class PasswordResetManager
         $hasPassword = \KaziOmar\OmniAuth\Facades\Omni::hasUserSetPassword($user);
 
         // Validation rules
+        $enforceStrength = (bool) config('omni-auth.password_reset.enforce_strength', true);
+        $passwordRules = ['required', 'string', 'confirmed'];
+        if ($enforceStrength && class_exists(\Illuminate\Validation\Rules\Password::class)) {
+            $passwordRules[] = \Illuminate\Validation\Rules\Password::defaults();
+        } else {
+            $passwordRules[] = 'min:8';
+        }
+
         $rules = [
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => $passwordRules,
             'password_confirmation' => ['required', 'string'],
             'logout_others' => ['nullable', 'boolean'],
         ];
@@ -612,6 +678,38 @@ class PasswordResetManager
                     'password' => ['The new password cannot be the same as your current password.'],
                 ]);
             }
+        } else {
+            // For passwordless (social-only) accounts setting a local password for the first time:
+            // Prevent stolen token backdoor by enforcing re-authentication via email OTP or 2FA code.
+            $code = $request->input('code') ?? $request->input('otp');
+            if (empty($code)) {
+                $this->sendEmailVerification($user);
+                RateLimiter::hit($throttleKey, 600);
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'For passwordless accounts, a verification code has been dispatched to your email. Please provide the code to set your password.',
+                    'requires_code' => true,
+                ], 422);
+            }
+
+            $otpKey = "omni_email_verify_otp_{$userId}";
+            $hashedOtp = $this->cache()->get($otpKey);
+            $twoFactorPassed = false;
+
+            if (method_exists($user, 'hasTwoFactorEnabled') && $user->hasTwoFactorEnabled()) {
+                $twoFactorPassed = \KaziOmar\OmniAuth\Facades\Omni::twoFactor()->verifyCode($user, (string) $code);
+            }
+
+            $emailOtpPassed = $hashedOtp && Hash::check(trim((string) $code), $hashedOtp);
+
+            if (!$twoFactorPassed && !$emailOtpPassed) {
+                RateLimiter::hit($throttleKey, 600);
+                throw ValidationException::withMessages([
+                    'code' => ['Invalid or expired verification code provided.'],
+                ]);
+            }
+
+            $this->cache()->forget($otpKey);
         }
 
         RateLimiter::clear($throttleKey);
@@ -632,8 +730,8 @@ class PasswordResetManager
             $socialAccount->update(['data' => $data]);
         }
 
-        // Optionally revoke other device sessions and refresh tokens
-        if ($request->boolean('logout_others', false)) {
+        // Revoke other device sessions and refresh tokens by default (logout_others default: true)
+        if ($request->boolean('logout_others', true)) {
             $this->deviceManager->logoutOthers($user, $request);
         }
 
