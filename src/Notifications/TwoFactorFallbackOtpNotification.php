@@ -35,13 +35,12 @@ class TwoFactorFallbackOtpNotification extends Notification
         $name = is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there';
 
         return (new MailMessage())
-            ->subject("[URGENT] Two-Factor Authentication Backup Passcode - {$appName}")
+            ->subject("Your {$appName} verification code")
             ->greeting("Hello {$name},")
-            ->line("A one-time emergency backup passcode was requested for Two-Factor Authentication on your {$appName} account.")
-            ->line('Your single-use 2FA fallback code is:')
+            ->line("Here is your one-time verification code for {$appName}:")
             ->line('# ' . $this->otp)
-            ->line('This passcode is valid for 10 minutes and can only be used once.')
-            ->line('⚠️ **Important Security Warning:** If you did not initiate this login attempt, someone may know your primary password. Please change your password immediately once you regain access.')
+            ->line('This code is valid for 10 minutes and can only be used once.')
+            ->line('⚠️ **If you did not try to sign in just now**, someone may know your password. We strongly recommend changing your password right away to keep your account safe.')
             ->salutation("Regards,\n**{$appName} Security Team**");
     }
 }

@@ -37,13 +37,13 @@ class SocialAccountLinkedNotification extends Notification
         $timestamp = now()->toRfc2822String();
 
         return (new MailMessage())
-            ->subject("Security Alert: New {$providerName} Account Connected - {$appName}")
+            ->subject("Security Alert: {$providerName} was connected to your account - {$appName}")
             ->greeting("Hello {$name},")
-            ->line("A new **{$providerName}** social account was connected to your {$appName} profile.")
-            ->line("**Connected Provider:** {$providerName}")
-            ->line("**Time:** {$timestamp} (UTC)")
-            ->line('You can now use this provider to sign in quickly and securely.')
-            ->line('If you did not authorize this connection, please log into your account settings and unlink it immediately.')
+            ->line("A **{$providerName}** account was just connected to your {$appName} profile.")
+            ->line("**Provider:** {$providerName}")
+            ->line("**When:** {$timestamp} (UTC)")
+            ->line('You can now use this provider to sign in directly.')
+            ->line("If you didn't connect this account, please sign in and disconnect it immediately from your account settings.")
             ->salutation("Regards,\n**{$appName} Security Team**");
     }
 }

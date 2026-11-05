@@ -37,12 +37,12 @@ class PasswordChangedNotification extends Notification
         $name = is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there';
 
         return (new MailMessage())
-            ->subject("Security Alert: Your Password Was Changed - {$appName}")
+            ->subject("Security Alert: Your password was changed - {$appName}")
             ->greeting("Hello {$name},")
-            ->line("This email confirms that the password for your {$appName} account was recently updated.")
-            ->line("**Time of change:** {$this->timestamp} (UTC)")
-            ->line('If you made this change, you can safely disregard this notification.')
-            ->line('⚠️ **If you did not make this change**, your account may be compromised. Please reset your password immediately or contact our support team to secure your account.')
+            ->line("The password for your {$appName} account was recently changed.")
+            ->line("**When:** {$this->timestamp} (UTC)")
+            ->line('If you made this change, you can safely disregard this email.')
+            ->line("⚠️ **If you didn't make this change**, please reset your password immediately or contact our support team to secure your account.")
             ->salutation("Regards,\n**{$appName} Security Team**");
     }
 }

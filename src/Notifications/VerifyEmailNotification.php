@@ -37,22 +37,23 @@ class VerifyEmailNotification extends Notification
         $ttl = (int) config('omni-auth.verification.ttl', 60);
 
         $mail = (new MailMessage())
-            ->subject("Verify Your Email Address - {$appName}")
+            ->subject("Verify your {$appName} email address")
             ->greeting("Hello {$name},")
-            ->line("Thank you for registering with {$appName}! Please confirm your email address to complete your registration.");
+            ->line("Thanks for signing up for {$appName}! Please confirm your email address to complete your registration.");
 
         if ($this->otp) {
-            $mail->line('Your 6-digit verification code is:')
-                ->line('# ' . $this->otp)
-                ->line("This verification code will expire in {$ttl} minutes.");
+            $mail->line('Your verification code is:')
+                ->line('# ' . $this->otp);
         }
 
         if ($this->signedUrl) {
-            $mail->action('Verify Email Address', $this->signedUrl);
+            $mail->line('Or click the button below to verify directly:')
+                ->action('Verify Email Address', $this->signedUrl);
         }
 
         return $mail
-            ->line('If you did not create an account, no further action is required.')
+            ->line("This code and link will expire in {$ttl} minutes.")
+            ->line("If you didn't create an account with {$appName}, you can safely ignore this email.")
             ->salutation("Regards,\n**{$appName} Team**");
     }
 }

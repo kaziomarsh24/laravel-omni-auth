@@ -37,20 +37,19 @@ class ResetPasswordOtpNotification extends Notification
         $ttl = (int) config('omni-auth.password_reset.otp_ttl', 15);
 
         $mail = (new MailMessage())
-            ->subject("Password Reset Request - {$appName}")
+            ->subject("Reset your {$appName} password")
             ->greeting("Hello {$name},")
-            ->line('You are receiving this email because a password reset request was initiated for your account.')
-            ->line('Your 6-digit one-time password (OTP) is:')
-            ->line('# ' . $this->otp)
-            ->line("This one-time passcode will expire in {$ttl} minutes.");
+            ->line('We received a request to reset your password. Use the verification code below to set a new password:')
+            ->line('# ' . $this->otp);
 
         if ($this->signedUrl) {
-            $mail->line('Alternatively, you can reset your password directly by clicking the button below:')
+            $mail->line('Or click the button below to reset it directly:')
                 ->action('Reset Password', $this->signedUrl);
         }
 
         return $mail
-            ->line('If you did not request a password reset, no further action is required. Your account password remains unchanged.')
+            ->line("This code will expire in {$ttl} minutes.")
+            ->line("If you didn't request a password reset, you can safely ignore this email—your account remains secure.")
             ->salutation("Regards,\n**{$appName} Team**");
     }
 }

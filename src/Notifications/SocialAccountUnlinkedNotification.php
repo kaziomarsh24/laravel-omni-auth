@@ -37,13 +37,12 @@ class SocialAccountUnlinkedNotification extends Notification
         $timestamp = now()->toRfc2822String();
 
         return (new MailMessage())
-            ->subject("Security Alert: {$providerName} Account Disconnected - {$appName}")
+            ->subject("Security Alert: {$providerName} was disconnected from your account - {$appName}")
             ->greeting("Hello {$name},")
-            ->line("The **{$providerName}** social account previously connected to your {$appName} profile was disconnected.")
-            ->line("**Disconnected Provider:** {$providerName}")
-            ->line("**Time:** {$timestamp} (UTC)")
-            ->line('If you initiated this change, no further action is required.')
-            ->line('⚠️ If you did not authorize disconnecting this provider, please check your account settings immediately.')
+            ->line("The **{$providerName}** account connected to your {$appName} profile was disconnected.")
+            ->line("**When:** {$timestamp} (UTC)")
+            ->line('If you did this, no further action is needed.')
+            ->line("⚠️ If you didn't authorize disconnecting this provider, please check your account settings right away.")
             ->salutation("Regards,\n**{$appName} Security Team**");
     }
 }

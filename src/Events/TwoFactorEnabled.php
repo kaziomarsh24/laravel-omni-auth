@@ -15,3 +15,4 @@ class TwoFactorEnabled
         public Authenticatable $user
     ) {}
 }
+

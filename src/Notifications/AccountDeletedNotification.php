@@ -36,12 +36,12 @@ class AccountDeletedNotification extends Notification
         $name = $this->name ?? (is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there');
 
         return (new MailMessage())
-            ->subject("Your Account Has Been Permanently Deleted - {$appName}")
+            ->subject("Your {$appName} account has been closed")
             ->greeting("Hello {$name},")
-            ->line("As requested, your {$appName} account and all associated personal data have been permanently deleted in accordance with data privacy regulations (GDPR).")
-            ->line('All active device sessions, security credentials, and authentication tokens have been permanently wiped from our systems.')
-            ->line("We are sorry to see you go! Thank you for having been part of {$appName}.")
-            ->line('If this account deletion was performed in error or without your permission, please contact our support team immediately.')
+            ->line("As requested, your {$appName} account and all associated personal data have been permanently deleted.")
+            ->line('All active sessions and authentication tokens have been wiped from our systems.')
+            ->line("We're sorry to see you go! Thank you for having been with us.")
+            ->line('If this account was closed by mistake, please reach out to our support team right away.')
             ->salutation("Best regards,\n**{$appName} Team**");
     }
 }

@@ -33,20 +33,19 @@ class TwoFactorStatusChangedNotification extends Notification
     {
         $appName = (string) (config('app.name') ?: 'Laravel');
         $name = is_object($notifiable) && !empty($notifiable->name) ? (string) $notifiable->name : 'there';
-        $statusLabel = strtolower($this->status) === 'enabled' ? 'Enabled' : 'Disabled';
+        $statusWord = strtolower($this->status) === 'enabled' ? 'turned on' : 'turned off';
         $timestamp = now()->toRfc2822String();
 
         $mail = (new MailMessage())
-            ->subject("Security Alert: Two-Factor Authentication {$statusLabel} - {$appName}")
+            ->subject("Security Alert: Two-step verification was {$statusWord} - {$appName}")
             ->greeting("Hello {$name},")
-            ->line("Two-Factor Authentication (2FA) was recently **{$statusLabel}** on your {$appName} account.")
-            ->line("**Status:** {$statusLabel}")
-            ->line("**Time:** {$timestamp} (UTC)");
+            ->line("Two-step verification (2FA) was recently **{$statusWord}** on your {$appName} account.")
+            ->line("**When:** {$timestamp} (UTC)");
 
         if (strtolower($this->status) === 'disabled') {
-            $mail->line('⚠️ **Warning:** Disabling 2FA significantly reduces your account security. If you did not authorize this change, please re-enable two-factor authentication immediately and change your password.');
+            $mail->line("⚠️ **Warning:** With two-step verification turned off, your account is less protected. If you didn't make this change, please turn it back on and change your password right away.");
         } else {
-            $mail->line('Your account is now protected with an additional layer of security.');
+            $mail->line('Your account is now protected with an extra layer of security.');
         }
 
         return $mail->salutation("Regards,\n**{$appName} Security Team**");

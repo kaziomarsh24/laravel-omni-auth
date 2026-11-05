@@ -16,3 +16,4 @@ class SocialAccountUnlinked
         public string $provider
     ) {}
 }
+

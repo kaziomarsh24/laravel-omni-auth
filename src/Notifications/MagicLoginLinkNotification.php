@@ -37,19 +37,21 @@ class MagicLoginLinkNotification extends Notification
         $ttl = (int) config('omni-auth.magic_link.ttl', 15);
 
         $mail = (new MailMessage())
-            ->subject("Your Magic Login Link - {$appName}")
-            ->greeting("Hello {$name},")
-            ->line("We received a request to log in to your {$appName} account without a password.")
-            ->action('Sign In Instantly', $this->magicUrl);
+            ->subject("Sign in to {$appName}")
+            ->greeting("Hello {$name},");
 
         if ($this->code) {
-            $mail->line('If you are using a mobile application or prefer using a numeric passcode, enter the 6-digit code below:')
-                ->line('# ' . $this->code);
+            $mail->line("Use this temporary code to sign in to your {$appName} account:")
+                ->line('# ' . $this->code)
+                ->line('Or click below to sign in directly:');
+        } else {
+            $mail->line("Click below to sign in to your {$appName} account:");
         }
 
         return $mail
-            ->line("This login link and passcode are single-use and will expire in {$ttl} minutes.")
-            ->line('If you did not request this link, you can safely ignore this email. No one can access your account without this link.')
+            ->action("Sign in to {$appName}", $this->magicUrl)
+            ->line("This link and code will expire in {$ttl} minutes.")
+            ->line("If you didn't request this email, you can safely ignore it—no one can access your account without it.")
             ->salutation("Regards,\n**{$appName} Team**");
     }
 }

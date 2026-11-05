@@ -48,7 +48,7 @@ class NotificationDeliveryTest extends TestCase
         Notification::assertSentTo($this->user, ResetPasswordOtpNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
 
-            $this->assertStringContainsString('Password Reset Request', $mail->subject);
+            $this->assertStringContainsString('Reset your', $mail->subject);
             $this->assertStringContainsString('Hello Kazi Omar,', $mail->greeting);
             $this->assertContains('# 582910', $mail->introLines);
             $this->assertSame('Reset Password', $mail->actionText);
@@ -66,7 +66,7 @@ class NotificationDeliveryTest extends TestCase
         Notification::assertSentTo($this->user, VerifyEmailNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
 
-            $this->assertStringContainsString('Verify Your Email Address', $mail->subject);
+            $this->assertStringContainsString('Verify your', $mail->subject);
             $this->assertContains('# 123456', $mail->introLines);
             $this->assertSame('Verify Email Address', $mail->actionText);
             $this->assertSame('https://example.com/verify-email', $mail->actionUrl);
@@ -83,8 +83,8 @@ class NotificationDeliveryTest extends TestCase
         Notification::assertSentTo($this->user, MagicLoginLinkNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
 
-            $this->assertStringContainsString('Your Magic Login Link', $mail->subject);
-            $this->assertSame('Sign In Instantly', $mail->actionText);
+            $this->assertStringContainsString('Sign in to', $mail->subject);
+            $this->assertStringContainsString('Sign in to', $mail->actionText);
             $this->assertSame('https://example.com/magic?token=xyz', $mail->actionUrl);
             $allLines = array_merge($mail->introLines, $mail->outroLines);
             $this->assertContains('# 654321', $allLines);
@@ -101,9 +101,9 @@ class NotificationDeliveryTest extends TestCase
         Notification::assertSentTo($this->user, TwoFactorFallbackOtpNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
 
-            $this->assertStringContainsString('Two-Factor Authentication Backup Passcode', $mail->subject);
+            $this->assertStringContainsString('verification code', $mail->subject);
             $this->assertContains('# 998877', $mail->introLines);
-            $this->assertStringContainsString('Important Security Warning', implode(' ', $mail->introLines));
+            $this->assertStringContainsString('changing your password', implode(' ', $mail->introLines));
             return true;
         });
     }
@@ -117,8 +117,8 @@ class NotificationDeliveryTest extends TestCase
         Notification::assertSentTo($this->user, PasswordChangedNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
 
-            $this->assertStringContainsString('Security Alert: Your Password Was Changed', $mail->subject);
-            $this->assertStringContainsString('If you did not make this change', implode(' ', $mail->introLines));
+            $this->assertStringContainsString('Security Alert: Your password was changed', $mail->subject);
+            $this->assertStringContainsString("didn't make this change", implode(' ', $mail->introLines));
             return true;
         });
     }
@@ -131,14 +131,14 @@ class NotificationDeliveryTest extends TestCase
 
         Notification::assertSentTo($this->user, TwoFactorStatusChangedNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
-            return str_contains($mail->subject, 'Two-Factor Authentication Enabled') && $notification->status === 'enabled';
+            return str_contains($mail->subject, 'Two-step verification was turned on') && $notification->status === 'enabled';
         });
 
         event(new TwoFactorDisabled($this->user));
 
         Notification::assertSentTo($this->user, TwoFactorStatusChangedNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
-            return str_contains($mail->subject, 'Two-Factor Authentication Disabled') && $notification->status === 'disabled';
+            return str_contains($mail->subject, 'Two-step verification was turned off') && $notification->status === 'disabled';
         });
 
         Notification::assertSentToTimes($this->user, TwoFactorStatusChangedNotification::class, 2);
@@ -152,7 +152,7 @@ class NotificationDeliveryTest extends TestCase
 
         Notification::assertSentTo($this->user, SocialAccountLinkedNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
-            $this->assertStringContainsString('Github Account Connected', $mail->subject);
+            $this->assertStringContainsString('Github was connected', $mail->subject);
             $this->assertSame('github', $notification->provider);
             return true;
         });
@@ -161,7 +161,7 @@ class NotificationDeliveryTest extends TestCase
 
         Notification::assertSentTo($this->user, SocialAccountUnlinkedNotification::class, function ($notification) {
             $mail = $notification->toMail($this->user);
-            $this->assertStringContainsString('Google Account Disconnected', $mail->subject);
+            $this->assertStringContainsString('Google was disconnected', $mail->subject);
             $this->assertSame('google', $notification->provider);
             return true;
         });
@@ -176,8 +176,8 @@ class NotificationDeliveryTest extends TestCase
         Notification::assertSentOnDemand(AccountDeletedNotification::class, function ($notification, $channels, $notifiable) {
             $this->assertSame('kazi@example.com', $notifiable->routes['mail']);
             $mail = $notification->toMail($notifiable);
-            $this->assertStringContainsString('Account Has Been Permanently Deleted', $mail->subject);
-            $this->assertStringContainsString('GDPR', implode(' ', $mail->introLines));
+            $this->assertStringContainsString('account has been closed', $mail->subject);
+            $this->assertStringContainsString('permanently deleted', implode(' ', $mail->introLines));
             return true;
         });
     }

@@ -15,3 +15,4 @@ class PasswordChanged
         public Authenticatable $user
     ) {}
 }
+
